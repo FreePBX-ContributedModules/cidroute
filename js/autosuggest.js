@@ -66,7 +66,7 @@ _b.AutoSuggest = function (id, param)
 	
 	// defaults	
 	//
-	var k, def = {minchars:1, meth:"get", varname:"input", className:"autosuggest", timeout:2500, delay:500, offsety:-5, shownoresults: true, noresults: "No results!", maxheight: 250, cache: true, maxentries: 25};
+	var k, def = {minchars:1, meth:"get", varname:"input", className:"autosuggest", timeout:2500, delay:500, offsety:-5, shownoresults: true, noresults: "No results!", maxheight: 250, cache: false, maxentries: 25};
 	for (k in def)
 	{
 		if (typeof(this.oP[k]) != typeof(def[k]))

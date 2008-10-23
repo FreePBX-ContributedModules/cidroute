@@ -72,4 +72,15 @@ if (DB::IsError($check)) {
         die_freepbx( "Can not create `cidroute_override` table: " . $check->getMessage() .  "\n");
 }
 
+$sql = "CREATE TABLE IF NOT EXISTS cidroute_dests (
+   destid int(11) not null auto_increment,    
+   name varchar(50) NOT NULL default '',    
+   dest varchar(50) NOT NULL default '',    
+   primary key (destid) 
+);";
+$check = $db->query($sql);
+if (DB::IsError($check)) {
+        die_freepbx( "Can not create `cidroute_override` table: " . $check->getMessage() .  "\n");
+}
+
 ?>
