@@ -1,14 +1,35 @@
 <?php /* $Id */
-//Copyright (C) Rob Thomas <xrobau@gmail.com> - Why Pay More 4 Less Pty Ltd (Australia) 2008
+//Copyright (C) Rob Thomas <xrobau@gmail.com> - 
+//    Why Pay More 4 Less Pty Ltd (Australia) 2008
 //
-//This program is free software; you can redistribute it and/or
-//modify it under the terms of version 2 of the GNU General Public 
-//License as published by the Free Software Foundation.
+//       This is NOT OPEN SOURCE SOFTWARE.
 //
-//This program is distributed in the hope that it will be useful,
-//but WITHOUT ANY WARRANTY; without even the implied warranty of
-//MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//GNU General Public License for more details.
+//  Whilst the source is available for you to look at, you 
+//  do NOT have a licence to change or  re-distribute this 
+//  software. 
+//
+//  This specific document, and the databases that accompany it
+//  are licenced for the SOLE USE of Astrogen LLC, otherwise
+//  known as FreePBX, to be distributed SOLEY with the FreePBX
+//  software package.
+//
+//  If you wish to licence the redistribution of these
+//  copyrighted documents, database, and database designes, 
+//  the ONLY company that is approved to do so is:
+
+//    Why Pay More 4 Less Pty Ltd,
+//    1 Grayson st,
+//    Gladstone, QLD, 4680
+
+//   If you do not have written permission from this company to
+//   do so, you are violating international copyright laws, and
+//   will be prosecuted to the full extent of the law.
+
+//   You may be asking why this licence is so strict?  At the time
+//   this was written, the Author believed that Fonatity was
+//   involved in numerous GPL Violations with their Trixbox
+//   product.  If and when that is ever resolved, this document
+//   will be re-licenced under v2 of the GPL.
 
 function cidroute_hook_core($viewing_itemid, $target_menuid) {
 	$html = '';
@@ -199,45 +220,13 @@ function cidroute_get_config($engine) {
 }
 
 
-function cidroute_did_get($did){
-//	$extarray = explode('/', $did, 2);
-//	if(count($extarray) == 2)	{ // differentiate beetween '//' (Any did / any cid and '' empty string)
-//		$sql = sprintf("SELECT cidroute_id FROM cidroute_incoming WHERE extension = '%s' AND cidnum = '%s'", $extarray[0], $extarray[1]);
-//		$result = sql($sql, "getRow", DB_FETCHMODE_ASSOC);
-//		if(is_array($result)){
-//			return $result['cidroute_id'];
-//		} else
-//			return null;
-//	} else { // $did is an empty string (for example when adding a new did)
-		return 0;
-//	}
-}
-
-function cidroute_did_list() {
-//	$sql = "
-//	SELECT cidroute_id, a.extension extension, a.cidnum cidnum, pricid FROM cidroute_incoming a 
-//	INNER JOIN incoming b
-//	ON a.extension = b.extension AND a.cidnum = b.cidnum
-//	";
-//
-//	//$results = sql("SELECT * FROM cidroute_incoming","getAll",DB_FETCHMODE_ASSOC);
-//	$results = sql($sql,"getAll",DB_FETCHMODE_ASSOC);
-	return is_array($results)?$results:null;
-}
-
 function cidroute_list() {
-	// TODO: discuss department isolation of sources
-//	$allowed = array(array('cidroute_id' => 0, 'description' => _("None"), 'sourcetype' => null));
-//	$results = sql("SELECT * FROM cidroute","getAll",DB_FETCHMODE_ASSOC);
-//	if(is_array($results)){
-//		foreach($results as $result){
-//			// check to see if we have a dept match for the current AMP User.
-//			if (checkDept($result['deptname'])){
-//				// return this item
-//				$allowed[] = $result;
-//			}
-//		}
-//	}
+	$results = sql("SELECT * FROM cidroute_dests","getAll",DB_FETCHMODE_ASSOC);
+	if(is_array($results)){
+		foreach($results as $result){
+			$allowed[] = $result;
+		}
+	}
 	return isset($allowed)?$allowed:null;
 }
 
@@ -253,44 +242,29 @@ function cidroute_del($id){
 }
 
 function cidroute_add($post){
-//	if(!cidroute_chk($post))
-//		return false;
-//	extract($post);
-//	if (!isset($cache))
-//		$cache = 0;
-//	$results = sql("
-//		INSERT INTO cidroute
-//			(description, sourcetype, cache, deptname, http_host, http_port, http_username, http_password, http_path, http_query, mysql_host, mysql_dbname, mysql_query, mysql_username, mysql_password)
-//		VALUES 
-//			(\"$description\", \"$sourcetype\", \"$cache\", \"$deptname\", \"$http_host\", \"$http_port\", \"$http_username\", \"$http_password\", \"$http_path\", \"$http_query\", \"$mysql_host\", \"$mysql_dbname\", \"$mysql_query\", \"$mysql_username\", \"$mysql_password\")
-//		");
+	global $db;
+	print_r($post);
+	$command = "INSERT INTO cidroute_dests (name, dest) VALUES ('".$db->escapeSimple($post['name'])."','";
+	$command .= $db->escapeSimple($post[$post['goto0'].'0'])."')";
+	$res = sql($command);
 }
 
-function cidroute_edit($id,$post){
-//	if(!cidroute_chk($post))
-//		return false;
-//	extract($post);
-//	if ($cache != 1)
-//		$cache = 0;
-//	$results = sql("
-//		UPDATE cidroute 
-//		SET 
-//			description = \"$description\", 
-//			deptname = \"$deptname\", 
-//			sourcetype = \"$sourcetype\" ,
-//			cache = \"$cache\",
-//			http_host = \"$http_host\",
-//			http_port = \"$http_port\",
-//			http_username = \"$http_username\",
-//			http_password = \"$http_password\",
-//			http_path = \"$http_path\",
-//			http_query = \"$http_query\",
-//			mysql_host = \"$mysql_host\",
-//			mysql_dbname = \"$mysql_dbname\",
-//			mysql_query = \"$mysql_query\",
-//			mysql_username = \"$mysql_username\",
-//			mysql_password  = \"$mysql_password\"
-//		WHERE cidroute_id = \"$id\"");
+function cidroute_alter($post){
+	if (isset($post['addquick'])) {
+		// Check for Range: Area: State:
+		$defn = explode(":", $post['quick']);
+		print_r($defn);
+		if (strcasecmp($defn[0], 'Range') === 0) {
+			print "<br>Adding range ".$defn[1]."\n";
+		} elseif (strcasecmp($defn[0], "Area") === 0) {
+			print "<br>Adding Area ".$defn[1]."\n";
+		} elseif (strcasecmp($defn[0], "State") === 0) {
+			print "<br>Adding State ".$defn[1]."\n";
+		} elseif (strcasecmp($defn[0], "Region") === 0) {
+			print "<br>Adding region ".$defn[1]."\n";
+		}
+	} elseif (isset($post['area'])) {
+	}
 }
 
 // ensures post vars is valid

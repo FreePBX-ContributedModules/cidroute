@@ -1,5 +1,38 @@
 <?php
 
+//Copyright (C) Rob Thomas <xrobau@gmail.com> -
+//    Why Pay More 4 Less Pty Ltd (Australia) 2008
+//
+//       This is NOT OPEN SOURCE SOFTWARE.
+//
+//  Whilst the source is available for you to look at, you
+//  do NOT have a licence to change or  re-distribute this
+//  software.
+//
+//  This specific document, and the databases that accompany it
+//  are licenced for the SOLE USE of Astrogen LLC, otherwise
+//  known as FreePBX, to be distributed SOLEY with the FreePBX
+//  software package.
+//
+//  If you wish to licence the redistribution of these
+//  copyrighted documents, database, and database designes,
+//  the ONLY company that is approved to do so is:
+
+//    Why Pay More 4 Less Pty Ltd,
+//    1 Grayson st,
+//    Gladstone, QLD, 4680
+
+//   If you do not have written permission from this company to
+//   do so, you are violating international copyright laws, and
+//   will be prosecuted to the full extent of the law.
+
+//   You may be asking why this licence is so strict?  At the time
+//   this was written, the Author believed that Fonatity was
+//   involved in numerous GPL Violations with their Trixbox
+//   product.  If and when that is ever resolved, this document
+//   will be re-licenced under v2 of the GPL.
+
+
 if (!function_exists('json_encode')) {
   function json_encode($a=false) {
     if (is_null($a)) return 'null';
@@ -44,11 +77,12 @@ include("../../../common/db_connect.php"); // Connect to DB
 
 #$_GET['_id'] = 'region';
 #$_GET['_value'] = 'NT|ALICE SPRINGS';
+#$_GET['input'] = '7497';
 
 if (isset($_GET['_id'])) {
+  # This is a joined-list query..
   global $db;
   $json = array();
-  # This is a joined-list query..
   if ($_GET['_id'] === 'state') {
 	if (!isset($_GET['_value'])) { exit; }
 	$q = sql("select distinct(state) from cidroute_cidlist order by state", "getAll", DB_FETCHMODE_ASSOC);
@@ -81,7 +115,6 @@ if (isset($_GET['_id'])) {
 } else {
   # This is a quickfind query..
 	$input = strtolower( $_GET['input'] );
-#	$input = "GLAD";
 	$len = strlen($input);
 	$limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 10;
 	
@@ -89,6 +122,15 @@ if (isset($_GET['_id'])) {
 	$count = 0;
 	$i = 0;
 
+	// Have they typed in a number, looking for a range?
+	if (is_numeric($input)) {
+		$q= sql("select localarea,min_numb,max_numb from cidroute_cidlist where min_numb like '".$input."%' or max_numb like '".$input."%' limit 10", "getAll", DB_FETCHMODE_ASSOC);
+		if (is_array($q)) {
+			foreach($q as $row) {
+				$json['results'][] = array( "id" => $i++, "value" => "Range:".$row['min_numb']."-".$row['max_numb'], "info" => "Area ".$row['localarea']);
+			}
+		}
+	}
 	// First. If the query is one or two characters, search for state..
 	if (strlen($input) < 3) {
 		$q = sql("select distinct(state) from cidroute_cidlist where state like '%".$db->escapeSimple($input)."%'","getAll", DB_FETCHMODE_ASSOC);
