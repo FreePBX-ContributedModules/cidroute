@@ -68,7 +68,7 @@
 			combo += '<input type="button" class="csadd" value="' + settings.addbtn + '" />';
 			combo += '<input type="button" class="csremove" value="' + settings.rembtn + '" />';
 			combo += '</fieldset>';
-			combo += '<select id="' + rightID + '" name="' + rightID + '" class="csright" multiple="multiple">';
+			combo += '<select id="' + rightID + '" name="' + rightID + '[]" class="csright" multiple="multiple">';
 			combo += '</select>';
 			combo += '</fieldset>';		
 		

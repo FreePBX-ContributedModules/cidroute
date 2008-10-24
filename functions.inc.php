@@ -2,31 +2,35 @@
 //Copyright (C) Rob Thomas <xrobau@gmail.com> - 
 //    Why Pay More 4 Less Pty Ltd (Australia) 2008
 //
-//       This is NOT OPEN SOURCE SOFTWARE.
+//       THIS IS NOT OPEN SOURCE SOFTWARE.
 //
 //  Whilst the source is available for you to look at, you 
-//  do NOT have a licence to change or  re-distribute this 
+//  do NOT have a licence to change or re-distribute this 
 //  software. 
-//
-//  This specific document, and the databases that accompany it
-//  are licenced for the SOLE USE of Astrogen LLC, otherwise
-//  known as FreePBX, to be distributed SOLEY with the FreePBX
-//  software package.
-//
+
+//  This specific document, all other associated files, any 
+//  databases, and the database designs that accompany it
+//  are Copyright 2008, and  are licenced for the SOLE USE of 
+//  Astrogen LLC, otherwise known as FreePBX, to be 
+//  distributed SOLEY with the FreePBX software package.
+
 //  If you wish to licence the redistribution of these
-//  copyrighted documents, database, and database designes, 
-//  the ONLY company that is approved to do so is:
+//  copyrighted documents, database, and database designs, 
+//  the ONLY company that is able to do so is:
 
 //    Why Pay More 4 Less Pty Ltd,
 //    1 Grayson st,
-//    Gladstone, QLD, 4680
+//    Gladstone, QLD, 4680, AUSTRALIA
+//
+//   PHYSICAL MAIL only (Electronic mail is not acceptable)
 
 //   If you do not have written permission from this company to
-//   do so, you are violating international copyright laws, and
-//   will be prosecuted to the full extent of the law.
+//   redistribute this copyrighted package and do so, you are 
+//   violating international copyright laws, and will be 
+//   prosecuted to the FULL EXTENT of the law.
 
 //   You may be asking why this licence is so strict?  At the time
-//   this was written, the Author believed that Fonatity was
+//   this was written, the Author believed that Fonality was
 //   involved in numerous GPL Violations with their Trixbox
 //   product.  If and when that is ever resolved, this document
 //   will be re-licenced under v2 of the GPL.
@@ -224,10 +228,10 @@ function cidroute_list() {
 	$results = sql("SELECT * FROM cidroute_dests","getAll",DB_FETCHMODE_ASSOC);
 	if(is_array($results)){
 		foreach($results as $result){
-			$allowed[] = $result;
+			$dests[] = $result;
 		}
 	}
-	return isset($allowed)?$allowed:null;
+	return isset($dests)?$dests:null;
 }
 
 function cidroute_get($id){
@@ -250,6 +254,7 @@ function cidroute_add($post){
 }
 
 function cidroute_alter($post){
+	global $db;
 	if (isset($post['addquick'])) {
 		// Check for Range: Area: State:
 		$defn = explode(":", $post['quick']);
@@ -257,11 +262,22 @@ function cidroute_alter($post){
 		if (strcasecmp($defn[0], 'Range') === 0) {
 			print "<br>Adding range ".$defn[1]."\n";
 		} elseif (strcasecmp($defn[0], "Area") === 0) {
-			print "<br>Adding Area ".$defn[1]."\n";
+			$q = "insert into cidroute_matches (country, areacode, min_numb, max_numb, dest) select ";
+			$q .= "country, areacode, min_numb, max_numb, ".$db->escapeSimple($post['itemid'])." from ";
+			$q .= "cidroute_cidlist where localarea = '".$db->escapeSimple($defn[1])."'";
+			sql($q);
 		} elseif (strcasecmp($defn[0], "State") === 0) {
 			print "<br>Adding State ".$defn[1]."\n";
+			$q = "insert into cidroute_matches (country, areacode, min_numb, max_numb, dest) select ";
+			$q .= "country, areacode, min_numb, max_numb, ".$db->escapeSimple($post['itemid'])." from ";
+			$q .= "cidroute_cidlist where state = '".$db->escapeSimple($defn[1])."'";
+			sql($q);
 		} elseif (strcasecmp($defn[0], "Region") === 0) {
 			print "<br>Adding region ".$defn[1]."\n";
+			$q = "insert into cidroute_matches (country, areacode, min_numb, max_numb, dest) select ";
+			$q .= "country, areacode, min_numb, max_numb, ".$db->escapeSimple($post['itemid'])." from ";
+			$q .= "cidroute_cidlist where region = '".$db->escapeSimple($defn[1])."'";
+			sql($q);
 		}
 	} elseif (isset($post['area'])) {
 	}

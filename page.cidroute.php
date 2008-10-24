@@ -181,8 +181,7 @@ function showEdit($itemid,$cidmaps)
 echo drawselects($dest,0);
 ?>
 	</td></tr>
-	<tr><td colspan=2><hr></td></tr>
-	<tr><td>
+	<tr><td colspan=2><hr>
         <script type="text/javascript" src="modules/cidroute/js/comboselect.js" charset="utf-8"></script>
 	<script type="text/javascript" src="modules/cidroute/js/chainedSelects.js" charset="utf-8"></script>
 	<script type="text/javascript" src="modules/cidroute/js/autosuggest.js" charset="utf-8"></script>
@@ -222,7 +221,7 @@ $(function()
                 }
         });
 	$(document).ready(function() {
-                $('#myselect').comboselect({ sort: 'both', addbtn: '+',  rembtn: '-' });
+                $('#myselect').comboselect({ sort: 'both', addbtn: '&gt;&gt;',  rembtn: '&lt;&lt;' });
 	});
 
 });
@@ -238,8 +237,8 @@ global $db;
         <input type="hidden" name="itemid" value="<? echo $itemid ?>">
         <input type="hidden" name="action" value="alter">
 	<input type="hidden" name="display" value="<? echo $dispnum; ?>">
-
-	Quick Select:</td><td>
+	</td></tr>
+	<tr><td>Quick Select:</td><td>
 	<input style="width: 200px" type="text" id="quick" name="quick" value="" /> &nbsp; <input type="submit" name="addquick" value="Add" /></td></tr>
 	<tr><td>State:</td><td> <select id="state" name="state">
 	<option id="0">Select State</option>
@@ -259,14 +258,19 @@ global $db;
        	<!-- area is chained by region combobox-->
 	<tr><td>Area:</td><td>
        	<select name="area" id="area"><option value="0">--</option></select></td></tr>
-	<tr><td><input type="submit" name="addselect" value="submit" /></td></tr>
-	<tr><td>Currently Used Maps</td></tr>
+	<tr><td><input type="submit" name="addselect" value="Submit" /></td></tr>
+	<tr><td><?php echo _('Currently Selected Areas'); ?></td>
+ 		<td style="text-align: right"><i>Move areas to right hand side to remove</i></td></tr>
+	
 	<tr><td colspan=2>
 	</form>
 	
 	
 	<form method="post" action="<? echo $_SERVER['PHP_SELF'] ?>" class="removestuff">
-	<select id="myselect" name="myselect" multiple="multiple">
+        <input type="hidden" name="itemid" value="<? echo $itemid ?>">
+        <input type="hidden" name="action" value="alter">
+	<input type="hidden" name="display" value="<? echo $dispnum; ?>">
+	<select id="myselect" name="myselect[]" multiple="multiple">
 <?
 	$q = "select  state, region, localarea, cidroute_cidlist.areacode, cidroute_cidlist.min_numb, cidroute_cidlist.max_numb ";
 	$q .= "from cidroute_cidlist right join cidroute_matches using (min_numb,max_numb) where cidroute_matches.dest='";
@@ -283,6 +287,8 @@ global $db;
 	
 	
 	</select>
+	</tr></td>
+	<tr><td colspan=2 style="text-align: right"><input type="submit" name="delselect" value="Remove Selected" /></td></tr>
 	</form>
 
 

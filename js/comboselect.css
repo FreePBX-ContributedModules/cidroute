@@ -1,4 +1,4 @@
-lxabel, ixnput, #myselect, #myotherselect {
+#myselect, #myotherselect {
 	display: block;
 	float: left;
 	width: 100px;
@@ -24,7 +24,7 @@ fieldset.comboselect {
 	border: 0;
 	display: block;
 	float: left;
-	width: 800px;
+	width: 100%;
 	margin-bottom: 10px;
 	padding: 0;
 }
@@ -32,17 +32,17 @@ fieldset.comboselect {
 fieldset.comboselect * {
 	display: block;
 	float: left;
-	width: 45%;
+	width: 47%;
 }
 
 fieldset.comboselect select {
-	height: 100px;
+	height: 300px;
 }
 
 fieldset.comboselect fieldset {
 	border: 0;
-	width: 30px;
-	height: 100px;
+	width: 3%;
+	height: 300px;
 	padding: 10px;
 	padding-top: 25px;
 }
