@@ -108,7 +108,6 @@ echo drawselects($dest,0);
 }
 
 function showEdit($itemid,$cidmaps) {
-//	$thisItem = cidroute_get($itemid);
 
 	$delURL = $_SERVER['PHP_SELF'].'?'.$_SERVER['QUERY_STRING'].'&action=delete';
 	$delButton = "
@@ -119,25 +118,102 @@ function showEdit($itemid,$cidmaps) {
 	<input type=submit value=\""._("Delete Route Map")."\">
 </form>";
 	
-	print "<h2>"._("Route:")." ". $cidmaps[$itemid-1]['name']."</h2>";
+	print "<h2>"._("Route")." ". $cidmaps[$itemid-1]['name'].":</h2>";
 
 ?>
+	<script type="text/javascript" src="modules/cidroute/js/chainedSelects.js" charset="utf-8"></script>
 	<script type="text/javascript" src="modules/cidroute/js/autosuggest.js" charset="utf-8"></script>
+<style>
+#loading
+{
+        position:absolute;
+        top:0px;
+        right:0px;
+        background:#ff0000;
+        color:#fff;
+        font-size:14px;
+        font-familly:Arial;
+        padding:2px;
+        display:none;
+}
+</style>
+
+<div id="loading">Loading ...</div>
+
+
 	<link rel="stylesheet" href="modules/cidroute/js/autosuggest.css" type="text/css" media="screen" charset="utf-8" />
 
+<script language="JavaScript" type="text/javascript">
+$(function()
+{
+        $('#state').chainSelect('#region','modules/cidroute/js/ajax.php',
+        {
+                before:function (target) //before request hide the target combobox and display the loading message
+                {
+                        $("#loading").css("display","block");
+                        $(target).css("display","none");
+                },
+                after:function (target) //after request show the target combobox and hide the loading message
+                {
+                        $("#loading").css("display","none");
+                        $(target).css("display","inline");
+                }
+        });
+        $('#region').chainSelect('#area','modules/cidroute/js/ajax.php',
+        {
+                before:function (target)
+                {
+                        $("#loading").css("display","block");
+                        $(target).css("display","none");
+                },
+                after:function (target)
+                {
+                        $("#loading").css("display","none");
+                        $(target).css("display","inline");
+                }
+        });
+});
+	</script>
 	<div>
 	<form method="get" action="" class="asholder">
-		<label for="region">Quick Selection:</label>
-		<input style="width: 200px" type="text" id="region" value="" /> 
+		<label for="quick">Quick Selection:</label>
+		<input style="width: 200px" type="text" id="quick" value="" /> 
 		<input type="submit" value="submit" />
 	</form>
 	</div>
 
+
+	<div>
+	<form name="formname" method="post" action="">
+        <!-- country combobox -->
+        <select id="state" name="state">
+<?
+	$res = sql("select distinct(state) from cidroute_cidlist order by state", "getAll", DB_FETCHMODE_ASSOC);
+	$tmp = 0;
+        if(is_array($res)){
+                foreach($res as $result){
+		print "<option value='".$tmp++."'>{$result['state']}</option>\n";
+                }
+        }
+?>
+        </select>
+        <!-- state combobox is chained by country combobox-->
+        <select name="region" id="region" style="display:none"></select>
+        <!-- city combobox is chained by state combobox-->
+        <select name="area" id="area" style="display:none"></select>
+	</form>
+	</div>
+
+	</div>
+
+
+
 	<script type="text/javascript">
  var options = { script: "modules/cidroute/js/ajax.php?type=global&limit=10&", 
 	varname:"input", json: true, shownowresults:true, maxresults:10 };
- var as = new bsn.AutoSuggest('region', options);
+ var as = new bsn.AutoSuggest('quick', options);
 	</script>
+
 
 <?php
 } 
