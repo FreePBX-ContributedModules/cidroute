@@ -1,37 +1,39 @@
 <?php /* $Id */
-
 //Copyright (C) Rob Thomas <xrobau@gmail.com> -
 //    Why Pay More 4 Less Pty Ltd (Australia) 2008
 //
-//       This is NOT OPEN SOURCE SOFTWARE.
+//       THIS IS NOT OPEN SOURCE SOFTWARE.
 //
 //  Whilst the source is available for you to look at, you
-//  do NOT have a licence to change or  re-distribute this
+//  do NOT have a licence to change or re-distribute this
 //  software.
-//
-//  This specific document, and the databases that accompany it
-//  are licenced for the SOLE USE of Astrogen LLC, otherwise
-//  known as FreePBX, to be distributed SOLEY with the FreePBX
-//  software package.
-//
+
+//  This specific document, all other associated files, any
+//  databases, and the database designs that accompany it
+//  are Copyright 2008, and  are licenced for the SOLE USE of
+//  Astrogen LLC, otherwise known as FreePBX, to be
+//  distributed SOLEY with the FreePBX software package.
+
 //  If you wish to licence the redistribution of these
-//  copyrighted documents, database, and database designes,
-//  the ONLY company that is approved to do so is:
+//  copyrighted documents, database, and database designs,
+//  the ONLY company that is able to do so is:
 
 //    Why Pay More 4 Less Pty Ltd,
 //    1 Grayson st,
-//    Gladstone, QLD, 4680
+//    Gladstone, QLD, 4680, AUSTRALIA
+//
+//   PHYSICAL MAIL only (Electronic mail is not acceptable)
 
 //   If you do not have written permission from this company to
-//   do so, you are violating international copyright laws, and
-//   will be prosecuted to the full extent of the law.
+//   redistribute this copyrighted package and do so, you are
+//   violating international copyright laws, and will be
+//   prosecuted to the FULL EXTENT of the law.
 
 //   You may be asking why this licence is so strict?  At the time
-//   this was written, the Author believed that Fonatity was
+//   this was written, the Author believed that Fonality was
 //   involved in numerous GPL Violations with their Trixbox
 //   product.  If and when that is ever resolved, this document
 //   will be re-licenced under v2 of the GPL.
-
 
 
 $tabindex = 0;
@@ -181,11 +183,14 @@ echo drawselects($dest,0);
 	</td></tr>
 	<tr><td colspan=2><hr></td></tr>
 	<tr><td>
+        <script type="text/javascript" src="modules/cidroute/js/comboselect.js" charset="utf-8"></script>
 	<script type="text/javascript" src="modules/cidroute/js/chainedSelects.js" charset="utf-8"></script>
 	<script type="text/javascript" src="modules/cidroute/js/autosuggest.js" charset="utf-8"></script>
-
+ 
 
 	<link rel="stylesheet" href="modules/cidroute/js/autosuggest.css" type="text/css" media="screen" charset="utf-8" />
+	<link rel="stylesheet" href="modules/cidroute/js/comboselect.css" type="text/css" media="screen" charset="utf-8" />
+
 
 <script language="JavaScript" type="text/javascript">
 $(function()
@@ -199,7 +204,7 @@ $(function()
                 },
                 after:function (target) //after request show the target combobox and hide the loading message
                 {
-                        $("#loading").css("display","none");
+                       $("#loading").css("display","none");
                         $(target).css("display","inline");
                 }
         });
@@ -216,6 +221,10 @@ $(function()
                         $(target).css("display","inline");
                 }
         });
+	$(document).ready(function() {
+                $('#myselect').comboselect({ sort: 'both', addbtn: '+',  rembtn: '-' });
+	});
+
 });
 	</script>
 	<div>
@@ -223,7 +232,9 @@ $(function()
 <? 
 global $itemid;
 global $dispnum;
+global $db;
 ?> 
+	<form method="post" action="<? echo $_SERVER['PHP_SELF'] ?>" class="asholder">
         <input type="hidden" name="itemid" value="<? echo $itemid ?>">
         <input type="hidden" name="action" value="alter">
 	<input type="hidden" name="display" value="<? echo $dispnum; ?>">
@@ -237,25 +248,46 @@ global $dispnum;
 	$tmp = 0;
         if(is_array($res)){
                 foreach($res as $result){
-		print "<option value='".$tmp++."'>{$result['state']}</option>\n";
+			print "<option value='".$tmp++."'>{$result['state']}</option>\n";
                 }
         }
 ?>
-		</select></td></tr>
-		<tr><td>Region:</td><td>
-		<!-- region is chained by state combobox-->
-		<select name="region" id="region"><option value="0">--</option></select></td></tr>
-        	<!-- area is chained by region combobox-->
-		<tr><td>Area:</td><td>
-        	<select name="area" id="area"><option value="0">--</option></select></td></tr>
+	</select></td></tr>
+	<tr><td>Region:</td><td>
+	<!-- region is chained by state combobox-->
+	<select name="region" id="region"><option value="0">--</option></select></td></tr>
+       	<!-- area is chained by region combobox-->
+	<tr><td>Area:</td><td>
+       	<select name="area" id="area"><option value="0">--</option></select></td></tr>
 	<tr><td><input type="submit" name="addselect" value="submit" /></td></tr>
+	<tr><td>Currently Used Maps</td></tr>
+	<tr><td colspan=2>
 	</form>
+	
+	
+	<form method="post" action="<? echo $_SERVER['PHP_SELF'] ?>" class="removestuff">
+	<select id="myselect" name="myselect" multiple="multiple">
+<?
+	$q = "select  state, region, localarea, cidroute_cidlist.areacode, cidroute_cidlist.min_numb, cidroute_cidlist.max_numb ";
+	$q .= "from cidroute_cidlist right join cidroute_matches using (min_numb,max_numb) where cidroute_matches.dest='";
+	$q .= $db->escapeSimple($itemid)."'";
+	$result = sql($q, "getAll", DB_FETCHMODE_ASSOC);
+        if(is_array($result)){
+                foreach($result as $res){
+			$var = $res['min_numb']."|".$res['max_numb'];
+			$desc = $res['state']."/".$res['region']."/".$res['localarea']." (".$res['min_numb']."-".$res['max_numb'].")";
+			print "<option value='".$var."'>$desc</option>\n";
+                }
+        }
+?>
+	
+	
+	</select>
+	</form>
+
+
 	</table>
 	</div>
-
-
-
-
 	<script type="text/javascript">
  var options = { script: "modules/cidroute/js/ajax.php?type=global&limit=10&", 
 	varname:"input", json: true, shownowresults:true, maxresults:10 };
