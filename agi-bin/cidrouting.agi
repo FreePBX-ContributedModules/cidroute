@@ -1,0 +1,150 @@
+#!/usr/bin/php -q
+<?php
+//Copyright (C) Rob Thomas <xrobau@gmail.com> -
+//    Why Pay More 4 Less Pty Ltd (Australia) 2008
+//
+//       THIS IS NOT OPEN SOURCE SOFTWARE.
+//
+//  Whilst the source is available for you to look at, you
+//  do NOT have a licence to change or re-distribute this
+//  software.
+
+//  This specific document, all other associated files, any
+//  databases, and the database designs that accompany it
+//  are Copyright 2008, and  are licenced for the SOLE USE of
+//  Astrogen LLC, otherwise known as FreePBX, to be
+//  distributed SOLEY with the FreePBX software package.
+
+//  If you wish to licence the redistribution of these
+//  copyrighted documents, database, and database designs,
+//  the ONLY company that is able to do so is:
+
+//    Why Pay More 4 Less Pty Ltd,
+//    1 Grayson st,
+//    Gladstone, QLD, 4680, AUSTRALIA
+//
+//   PHYSICAL MAIL only (Electronic mail is not acceptable)
+
+//   If you do not have written permission from this company to
+//   redistribute this copyrighted package and do so, you are
+//   violating international copyright laws, and will be
+//   prosecuted to the FULL EXTENT of the law.
+
+//   You may be asking why this licence is so strict?  At the time
+//   this was written, the Author believed that Fonality was
+//   involved in numerous GPL Violations with their Trixbox
+//   product.  If and when that is ever resolved, this document
+//   will be re-licenced under v2 of the GPL.
+
+
+
+//  Overview of the CIDrouting AGI:
+//      * Grab the CID number (== $cid)
+//          o If unsset($cid) exit (no CID, bad luck..) 
+//    * Connect to DB
+//    * select dest from cidroute_override where cid = $cid
+//          o If isset($dest) agi->goto($dest) 
+//    * select dest from cidroute_matches where min_numb >= $cid and max_numb <= $cid
+//          o if isset($dest) agi->goto($dest) 
+//    * exit (it didn't match, continue on..) 
+
+require_once "phpagi.php";
+require_once "phpagi-asmanager.php";
+
+// global $db;
+global $amp_conf;
+$quietmode = 1;
+
+
+// Startup - Ensure that we have a CallerID number.
+
+$AGI = new AGI();
+debug("Starting CIDlookup.agi", 1);
+$cidnum = $AGI->request['agi_callerid'];
+if (!isset($cidnum) || !is_numeric($cidnum) || strlen($cidnum) < 5) {
+	debug("CallerID not Parseable or too short - received $cidnum - exiting",1);
+	exit;
+}
+debug("Searching for CallerID '$cidnum' in lookup tables",1);
+
+// It's a Valid CallerID Number
+parse_amportal_conf("/etc/amportal.conf");
+// Connect to the Database...
+require_once($amp_conf['AMPWEBROOT']."/admin/common/db_connect.php");
+
+// Just incase something insane goes wrong wtih the sql query, we grab the die_freepbx function
+// and redirect it to agi->debug.. This SHOULDN'T exist here, unless it's moved into db_connect.php
+// which I really don't expect it to be, but hey. Better safe than sorry.
+
+if (!function_exists("die_freepbx")) {
+	function die_freepbx($var) {
+		debug($var,0);
+	}
+}
+// See if it's an 'override' number..
+$res = sql("select dest from cidroute_override where number='".$cidnum."'", "getRow");
+if (isset($res[0])) {
+	debug("Override: Found a result - {$res[0]}", 1);
+	exit;
+} else {
+	debug("Override: No results", 1);
+}
+
+// Lets see if it's in the _matches database..
+$q = "select cidroute_dests.dest from cidroute_dests join cidroute_matches on cidroute_dests.destid=cidroute_matches.dest where '$cidnum' >= min_numb and '$cidnum' <= max_numb";
+$res = sql($q, "getRow");
+if (isset($res[0])) {
+	if (strlen($res[0]) != 0) {
+		debug("Lookup: Found a result - {$res[0]}", 1);
+		exit;
+	} else {
+		debug("Found a result, but it's EMPTY", 1);
+	}
+} else {
+	debug("Lookup: No results", 1);
+}
+
+
+
+
+
+// All the useful tools here..
+function parse_amportal_conf($filename="/etc/amportal.conf") {
+	global $amp_conf;
+
+	$file = file($filename);
+	if (is_array($file)) {
+		foreach ($file as $line) {
+			if (preg_match("/^\s*([a-zA-Z0-9_]+)=([a-zA-Z0-9 .&-@=_<>\"\']+)\s*$/",$line,$matches)) {
+				$amp_conf[ $matches[1] ] = $matches[2];
+			}
+		}
+	} 
+}
+
+function get_var( $agi, $value) {
+        $r = $agi->get_variable( $value );
+
+        if ($r['result'] == 1) {
+                $result = $r['data'];
+                return $result;
+        }
+        return '';
+}
+
+function debug($string, $level=3) {
+        global $AGI;
+        $AGI->verbose($string, $level);
+}
+
+function sql($sql,$type="query",$fetchmode=null) {
+        global $db;
+        $results = $db->$type($sql,$fetchmode);
+        if(DB::IsError($results)) {
+                die_freepbx($results->getDebugInfo() . "SQL - <br> $sql" );
+        }
+        return $results;
+}
+
+
+
