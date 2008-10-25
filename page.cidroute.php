@@ -58,12 +58,16 @@ if(isset($_REQUEST['action'])) {
 		break;
 		case "alter":
 			cidroute_alter($_POST);
-			showEdit();
+			showEdit($itemid,$cidmaps);
 	#		needreload();
 	#		redirect_standard();
 		break;
+		case "delmaps":
+			cidroute_delmaps($_POST);
+			showEdit($itemid,$cidmaps);
+		break;
 		case "edit":
-			showEdit();
+			showEdit($itemid,$cidmaps);
 	#		needreload();
 	#		redirect_standard('itemid');
 		break;
@@ -110,6 +114,7 @@ function showNew() {
         <input type="hidden" name="action" value="add">
 	<input type="hidden" name="display" value="<? echo $dispnum; ?>">
         <table>
+	<tr><td style="width:30%"></td><td style="width:70%"></td>
         <tr><td colspan="2"><h5><?php  echo ($extdisplay ? _("Edit Route Destination") : _("Add Route Destination")) ?><hr></h5></td></tr>
         <tr>
                 <td><a href="#" class="info"><?php echo _("Description")?>:<span><?php echo _("The name of this route map")?></span></a></td>
@@ -121,7 +126,7 @@ function showNew() {
 
 <?php
 //draw goto selects
-echo drawselects($dest,0);
+echo drawselects(0,0);
 ?>
 
         <input name="Submit" type="submit" value="<?php echo _("Go"); ?>" tabindex="<?php echo ++$tabindex;?>">
@@ -139,11 +144,12 @@ echo drawselects($dest,0);
 function showEdit($itemid,$cidmaps) 
 {
 
+	global $db;
 	showHeader();
 	$delURL = $_SERVER['PHP_SELF'].'?'.$_SERVER['QUERY_STRING'].'&action=delete';
 	$delButton = "
 <form name=delete action=\"{$_SERVER['PHP_SELF']}\" method=POST>
-	<input type=\"hidden\" name=\"display\" value=\"{$dispnum}\">
+	<input type=\"hidden\" name=\"display\" value=\"cidroute\">
 	<input type=\"hidden\" name=\"itemid\" value=\"{$itemid}\">
 	<input type=\"hidden\" name=\"action\" value=\"delete\">
 	<input type=submit value=\""._("Delete Route Map")."\">
@@ -166,6 +172,7 @@ function showEdit($itemid,$cidmaps)
 
 <div id="loading">Loading ...</div>
 <table>
+	<tr><td style="width:10%"></td><td style="width:90%"></td>
 	<tr><td colspan=2><h2 id="title">Manage CID Groups</h2></td></tr>
 	
 <tr><td colspan=2>
@@ -175,12 +182,23 @@ function showEdit($itemid,$cidmaps)
 ?>
 	<tr><td colspan=2><span id="instructions">Select the destination for the CID Groups below, then update the CallerID Groups to suit. Note that changes happen <em>immediately</em> without a need for a reload. (PS: No, they don't)</span></td></tr>
         <tr><td colspan=2><h5><?php echo _("Destination")?>:<hr></h5>
+        <input type="hidden" name="itemid" value="<? echo $itemid ?>">
+        <input type="hidden" name="action" value="alter">
+	<input type="hidden" name="display" value="cidroute">
 
+	<form method="post" action="<? echo $_SERVER['PHP_SELF'] ?>" class="asholder">
 <?php
 //draw goto selects
-echo drawselects($dest,0);
+	$dest=sql("select dest from cidroute_dests where destid='".$db->escapeSimple($itemid)."'", "getRow");
+	if (isset($dest[0])) {
+		echo drawselects($dest[0],0);
+	} else {
+		echo drawselects(0,0);
+	}
+		
 ?>
 	</td></tr>
+	<tr><td><input type="submit" name="updatedest" value="Change Destination" /></td></tr>
 	<tr><td colspan=2><hr>
         <script type="text/javascript" src="modules/cidroute/js/comboselect.js" charset="utf-8"></script>
 	<script type="text/javascript" src="modules/cidroute/js/chainedSelects.js" charset="utf-8"></script>
@@ -268,11 +286,11 @@ global $db;
 	
 	<form method="post" action="<? echo $_SERVER['PHP_SELF'] ?>" class="removestuff">
         <input type="hidden" name="itemid" value="<? echo $itemid ?>">
-        <input type="hidden" name="action" value="alter">
+        <input type="hidden" name="action" value="delmaps">
 	<input type="hidden" name="display" value="<? echo $dispnum; ?>">
 	<select id="myselect" name="myselect[]" multiple="multiple">
 <?
-	$q = "select  state, region, localarea, cidroute_cidlist.areacode, cidroute_cidlist.min_numb, cidroute_cidlist.max_numb ";
+	$q = "select state, region, localarea, cidroute_cidlist.areacode, cidroute_matches.min_numb, cidroute_matches.max_numb ";
 	$q .= "from cidroute_cidlist right join cidroute_matches using (min_numb,max_numb) where cidroute_matches.dest='";
 	$q .= $db->escapeSimple($itemid)."'";
 	$result = sql($q, "getAll", DB_FETCHMODE_ASSOC);

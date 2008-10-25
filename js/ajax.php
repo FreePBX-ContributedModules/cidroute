@@ -134,8 +134,8 @@ if (isset($_GET['_id'])) {
 			}
 		}
 	}
-	// First. If the query is one or two characters, search for state..
-	if (strlen($input) < 3) {
+	// First. If the query is three or less characters, search for state..
+	if (strlen($input) < 4) {
 		$q = sql("select distinct(state) from cidroute_cidlist where state like '%".$db->escapeSimple($input)."%'","getAll", DB_FETCHMODE_ASSOC);
 		if (is_array($q)) {
 			foreach($q as $row) {

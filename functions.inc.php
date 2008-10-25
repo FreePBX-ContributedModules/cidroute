@@ -260,7 +260,25 @@ function cidroute_alter($post){
 		$defn = explode(":", $post['quick']);
 		print_r($defn);
 		if (strcasecmp($defn[0], 'Range') === 0) {
+			$res = explode("-", $defn[1]);
 			print "<br>Adding range ".$defn[1]."\n";
+			$q = "select count(min_numb) from cidroute_cidlist where min_numb = '".$db->escapeSimple($res[0])."'";
+			print "Doing $q<br>\n";
+			$ret = sql($q,"getRow");
+			print_r($ret);
+			if ($ret[0] == 0) {
+				// This is a manual range entry.. So don't know the area code
+				$q = "insert into cidroute_matches (country, areacode, min_numb, max_numb, dest) values ";
+				$q .= "('au', '99', '".$db->escapeSimple($res[0])."', '".$db->escapeSimple($res[1])."', ";
+				$q .= $db->escapeSimple($post['itemid']).")";
+			} else {
+				$q = "insert into cidroute_matches (country, areacode, min_numb, max_numb, dest) select ";
+				$q .= "country, areacode, min_numb, max_numb, ".$db->escapeSimple($post['itemid'])." from ";
+				$q .= "cidroute_cidlist where min_numb = '".$db->escapeSimple($res[0])."' and ";
+				$q .= "max_numb = '".$db->escapeSimple($res[1])."'";
+			}
+			print "Doing $q<br>\n";
+			sql($q);
 		} elseif (strcasecmp($defn[0], "Area") === 0) {
 			$q = "insert into cidroute_matches (country, areacode, min_numb, max_numb, dest) select ";
 			$q .= "country, areacode, min_numb, max_numb, ".$db->escapeSimple($post['itemid'])." from ";
@@ -279,8 +297,37 @@ function cidroute_alter($post){
 			$q .= "cidroute_cidlist where region = '".$db->escapeSimple($defn[1])."'";
 			sql($q);
 		}
+	} elseif (isset($post['updatedest'])) {
+		$command = "update cidroute_dests set dest = '";
+		$command .= $db->escapeSimple($post[$post['goto0'].'0'])."' where destid='";
+		$command .= $db->escapeSimple($post['itemid'])."'";
+		sql($command);
 	} elseif (isset($post['area'])) {
+		$reg = explode("|", $post['area']);
+		$q = "insert into cidroute_matches (country, areacode, min_numb, max_numb, dest) select ";
+		$q .= "country, areacode, min_numb, max_numb, ".$db->escapeSimple($post['itemid'])." from ";
+		$q .= "cidroute_cidlist where state = '".$db->escapeSimple($reg[0])."' and region = '";
+		$q .= $db->escapeSimple($reg[1])."' and localarea='".$db->escapeSimple($reg[2])."'";
+		print "Doing $q<br>\n";
+		sql($q);
 	}
+}
+
+function cidroute_delmaps($post){
+	global $db;
+	if (isset($post['myselect'])) {
+		// Javascript combo box didn't work..
+		$res = $post['myselect'];
+	} elseif (isset($post['myselect_right'])) {
+		$res = $post['myselect_right'];
+	} else {
+		return;
+	}
+	foreach ($res as $r) {
+		$arr = explode("|", $r);
+		$q = "delete from cidroute_matches where min_numb='".$arr[0]."' and max_numb='".$arr[1]."'";
+		sql($q);
+	}	
 }
 
 // ensures post vars is valid
