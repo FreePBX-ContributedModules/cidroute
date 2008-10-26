@@ -145,33 +145,33 @@ function cidroute_alter($post){
 			print_r($ret);
 			if ($ret[0] == 0) {
 				// This is a manual range entry.. So don't know the area code
-				$q = "insert into cidroute_matches (country, areacode, min_numb, max_numb, dest) values ";
+				$q = "insert into cidroute_matches (country, areacode, min_numb, max_numb, dest, name) values ";
 				$q .= "('au', '99', '".$db->escapeSimple($res[0])."', '".$db->escapeSimple($res[1])."', ";
-				$q .= $db->escapeSimple($post['itemid']).")";
+				$q .= $db->escapeSimple($post['itemid']).", 'Manual Range')";
 			} else {
-				$q = "insert into cidroute_matches (country, areacode, min_numb, max_numb, dest) select ";
-				$q .= "country, areacode, min_numb, max_numb, ".$db->escapeSimple($post['itemid'])." from ";
-				$q .= "cidroute_cidlist where min_numb = '".$db->escapeSimple($res[0])."' and ";
-				$q .= "max_numb = '".$db->escapeSimple($res[1])."'";
+				$q = "insert into cidroute_matches (country, areacode, min_numb, max_numb, dest, name) select ";
+				$q .= "country, areacode, min_numb, max_numb, ".$db->escapeSimple($post['itemid']).", ";
+				$q .= "localarea as name from cidroute_cidlist where min_numb = '".$db->escapeSimple($res[0]);
+				$q .= "' and max_numb = '".$db->escapeSimple($res[1])."'";
 			}
 			print "Doing $q<br>\n";
 			sql($q);
 		} elseif (strcasecmp($defn[0], "Area") === 0) {
-			$q = "insert into cidroute_matches (country, areacode, min_numb, max_numb, dest) select ";
-			$q .= "country, areacode, min_numb, max_numb, ".$db->escapeSimple($post['itemid'])." from ";
-			$q .= "cidroute_cidlist where localarea = '".$db->escapeSimple($defn[1])."'";
+			$q = "insert into cidroute_matches (country, areacode, min_numb, max_numb, dest, name) select ";
+			$q .= "country, areacode, min_numb, max_numb, ".$db->escapeSimple($post['itemid']).", localarea ";
+			$q .= "as name from cidroute_cidlist where localarea = '".$db->escapeSimple($defn[1])."'";
 			sql($q);
 		} elseif (strcasecmp($defn[0], "State") === 0) {
 			print "<br>Adding State ".$defn[1]."\n";
-			$q = "insert into cidroute_matches (country, areacode, min_numb, max_numb, dest) select ";
-			$q .= "country, areacode, min_numb, max_numb, ".$db->escapeSimple($post['itemid'])." from ";
-			$q .= "cidroute_cidlist where state = '".$db->escapeSimple($defn[1])."'";
+			$q = "insert into cidroute_matches (country, areacode, min_numb, max_numb, dest, name) select ";
+			$q .= "country, areacode, min_numb, max_numb, ".$db->escapeSimple($post['itemid']).", localarea ";
+			$q .= "as name from cidroute_cidlist where state = '".$db->escapeSimple($defn[1])."'";
 			sql($q);
 		} elseif (strcasecmp($defn[0], "Region") === 0) {
 			print "<br>Adding region ".$defn[1]."\n";
-			$q = "insert into cidroute_matches (country, areacode, min_numb, max_numb, dest) select ";
-			$q .= "country, areacode, min_numb, max_numb, ".$db->escapeSimple($post['itemid'])." from ";
-			$q .= "cidroute_cidlist where region = '".$db->escapeSimple($defn[1])."'";
+			$q = "insert into cidroute_matches (country, areacode, min_numb, max_numb, dest, name) select ";
+			$q .= "country, areacode, min_numb, max_numb, ".$db->escapeSimple($post['itemid']).", localarea ";
+			$q .= "as name from cidroute_cidlist where region = '".$db->escapeSimple($defn[1])."'";
 			sql($q);
 		}
 	} elseif (isset($post['updatedest'])) {
@@ -181,9 +181,9 @@ function cidroute_alter($post){
 		sql($command);
 	} elseif (isset($post['area'])) {
 		$reg = explode("|", $post['area']);
-		$q = "insert into cidroute_matches (country, areacode, min_numb, max_numb, dest) select ";
-		$q .= "country, areacode, min_numb, max_numb, ".$db->escapeSimple($post['itemid'])." from ";
-		$q .= "cidroute_cidlist where state = '".$db->escapeSimple($reg[0])."' and region = '";
+		$q = "insert into cidroute_matches (country, areacode, min_numb, max_numb, dest, name) select ";
+		$q .= "country, areacode, min_numb, max_numb, ".$db->escapeSimple($post['itemid']).", localarea ";
+		$q .= "as name from cidroute_cidlist where state = '".$db->escapeSimple($reg[0])."' and region = '";
 		$q .= $db->escapeSimple($reg[1])."' and localarea='".$db->escapeSimple($reg[2])."'";
 		print "Doing $q<br>\n";
 		sql($q);

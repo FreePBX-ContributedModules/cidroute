@@ -59,8 +59,6 @@ if(isset($_REQUEST['action'])) {
 		case "alter":
 			cidroute_alter($_REQUEST);
 			showEdit($itemid,$cidmaps);
-	#		needreload();
-	#		redirect_standard();
 		break;
 		case "delmaps":
 			cidroute_delmaps($_REQUEST);
@@ -68,8 +66,9 @@ if(isset($_REQUEST['action'])) {
 		break;
 		case "edit":
 			showEdit($itemid,$cidmaps);
-	#		needreload();
-	#		redirect_standard('itemid');
+		break;
+		case "override":
+			showOverride();
 		break;
 		case "*":
 			showNew();
@@ -93,11 +92,14 @@ function showHeader() {
 <?php
 if (isset($cidmaps)) {
 	foreach ($cidmaps as $cidsource) {
-		if ($cidsource['destid'] != 0)
-			echo "<li><a id=\"".($itemid==$cidsource['destid'] ? 'current':'')."\" href=\"config.php?display=$dispnum&action=edit&itemid=".$cidsource['destid']."\">{$cidsource['name']}</a></li>";
+		if ($cidsource['destid'] != 0) {
+			echo "<li><a id=\"".($itemid==$cidsource['destid'] ? 'current':'')."\" href=\"config.php?display=";
+			echo urlencode($dispnum)."&action=edit&itemid=".$cidsource['destid']."\">{$cidsource['name']}</a></li>";
+		}
 	}
 }
 ?>
+<li><a href="config.php?display=<?php echo urlencode($dispnum); ?>&action=override">Manage Overrides</a></li>
 </ul></div>
 
 <div class="content">
@@ -108,15 +110,28 @@ function showNew() {
 	global $dispnum;
 	showHeader();
 ?>
-	<p style="width: 80%"><?php echo ($itemid ? '' : _("This is where you maintain your Caller Location Routing interface. ")); ?></p>
-	<p style="width: 80%"><?php echo ($itemid ? '' : _("Select a Name and Destination. You will be able to edit the mapping by clicking on the map name on the right.")); ?></p>
+	<h3 id='title'><?php echo _("Caller Location Based Routing") ?></h2></td>
+	<tr><td colspan=2><span id="instructions">
+<?php
+	echo "<p>"._("Caller Location Based Routing"); echo " ";
+	echo _("lets you set the desination of the call based on the CallerID of the Caller."); echo " ";
+	echo _(" This is used to provide caller-location-dependent services, such as may be used in a franchise of multiple stores that want to provide the one public phone number, and route calls dependant on the callers location."); echo "</p>";
+	echo "<p><em>"._("Note that this module, unlike most others, requires the database to be available AT ALL TIMES."); echo "</em></p>";
+	// Yes, this isn't translated. There's no use translating it yet, because Australia only speaks English.
+	// Take it out when we've actually got some other exchanges!
+	echo "<p>This module currently only supports AUSTRALIA. Other countries will follow as soon as the exchange mappings are provided</p>";
+	echo "<p>"._("You enable or disable the Caller Location Based Routing on the Inbound Routes page.")." ";
+	echo _("When that is enabled, calls are first checked against the list of CallerID Ranges here.")." ";
+	echo _("If the Caller ID matches any one of the ranges, the destination of the call is changed to what is specified on each group.")." ";
+	echo _("If the Caller ID of the call does not match any of the selected ones here, the call proceeds to the desination selected in Inbound Routes."); ?>
+</p>
 
-<form name="cidroutemap" action="<? echo $_SERVER['PHP_SELF'] ?>" method="post">
+<form name="cidroutemap" action="<?php echo $_SERVER['PHP_SELF'] ?>" method="post">
         <input type="hidden" name="action" value="add">
-	<input type="hidden" name="display" value="<? echo $dispnum; ?>">
+	<input type="hidden" name="display" value="<?php echo $dispnum; ?>">
         <table>
 	<tr><td style="width:30%"></td><td style="width:70%"></td>
-        <tr><td colspan="2"><h5><?php  echo ($extdisplay ? _("Edit Route Destination") : _("Add Route Destination")) ?><hr></h5></td></tr>
+        <tr><td colspan="2"><h5><?php echo ($extdisplay ? _("Edit Route Destination") : _("Add Route Destination")) ?><hr></h5></td></tr>
         <tr>
                 <td><a href="#" class="info"><?php echo _("Description")?>:<span><?php echo _("The name of this route map")?></span></a></td>
                 <td><input size="15" type="text" name="name" value="<?php  echo $description; ?>" tabindex="<?php echo ++$tabindex;?>"></td>
@@ -147,9 +162,7 @@ function showEdit($itemid,$cidmaps)
 
 	global $db;
 	showHeader();
-	$delURL = $_SERVER['PHP_SELF'].'?'.$_SERVER['QUERY_STRING'].'&action=delete';
-	$delButton = "
-<form name=delete action=\"{$_SERVER['PHP_SELF']}\" method=POST>
+	$delButton = "<form name=delete action=\"{$_SERVER['PHP_SELF']}\" method=POST>
 	<input type=\"hidden\" name=\"display\" value=\"cidroute\">
 	<input type=\"hidden\" name=\"itemid\" value=\"{$itemid}\">
 	<input type=\"hidden\" name=\"action\" value=\"delete\">
@@ -322,4 +335,11 @@ global $db;
 
 <?php
 } 
+
+
+
+function showOverride() {
+	global $dispnum;
+	showHeader();
+}
 ?>

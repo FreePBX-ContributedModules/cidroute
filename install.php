@@ -38,7 +38,7 @@ if (DB::IsError($check)) {
 
 
 $sql = "CREATE TABLE IF NOT EXISTS cidroute_matches (
-  name varchar(20) NOT NULL default '',
+  name varchar(50) default '',
   country varchar(2) NOT NULL default '',
   areacode int(11) unsigned NOT NULL,
   min_numb int(11) unsigned NOT NULL,
