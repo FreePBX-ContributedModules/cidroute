@@ -53,17 +53,17 @@ if(isset($_REQUEST['action'])) {
 	print_r($_REQUEST);
 	switch ($action) {
 		case "add":
-			cidroute_add($_POST);
+			cidroute_add($_REQUEST);
 			redirect_standard();
 		break;
 		case "alter":
-			cidroute_alter($_POST);
+			cidroute_alter($_REQUEST);
 			showEdit($itemid,$cidmaps);
 	#		needreload();
 	#		redirect_standard();
 		break;
 		case "delmaps":
-			cidroute_delmaps($_POST);
+			cidroute_delmaps($_REQUEST);
 			showEdit($itemid,$cidmaps);
 		break;
 		case "edit":
@@ -105,6 +105,7 @@ if (isset($cidmaps)) {
 }
 	
 function showNew() {
+	global $dispnum;
 	showHeader();
 ?>
 	<p style="width: 80%"><?php echo ($itemid ? '' : _("This is where you maintain your Caller Location Routing interface. ")); ?></p>
