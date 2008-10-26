@@ -35,6 +35,8 @@
 //   product.  If and when that is ever resolved, this document
 //   will be re-licenced under v2 of the GPL.
 
+
+// Stick this in the DID page.
 function cidroute_hook_core($viewing_itemid, $target_menuid) {
 	$html = '';
 	if ($target_menuid == 'did')	{
@@ -61,168 +63,48 @@ function cidroute_hook_core($viewing_itemid, $target_menuid) {
 	
 }
 
+function cidroute_hookGet_config($engine) {
+	global $ext;  
+	switch($engine) {
+		case "asterisk":
+			$trunks = cidroute_get_trunks();
+			// Returns ("12345/", "23456/", "/");
+			if(is_array($trunks)) {
+				foreach($trunks as $trunk) {
+					$arr = explode("/", $trunk[0]);
+					print_r($arr);
+					if (empty($arr[0])) {
+						$dest = "_.";
+					} else {
+						$dest = $arr[0];
+					}
+					if (empty($arr[1])) {
+						$cid = ""; 
+					} else {
+						$cid = "/".$arr[1];
+					}
+					$context = "ext-did-0002";
+                                        $exten = "$dest$cid";
+					$ext->splice($context, $exten, 1, new ext_agi('cidrouting.agi'));
 
-function cidroute_hookProcess_core($viewing_itemid, $request) {
-	
-	if (!isset($request['action']))
-		return;
-	global $db;
-	switch ($request['action'])	{
-		case 'addIncoming':
-			$results = sql(sprintf('INSERT INTO cidroute_config (trunk, enabled) VALUES ("%s", %d)', 
-				$db->escapeSimple($request['extdisplay']), $request['cidroute']));
-		break;
-		case 'delIncoming':
-			$results = sql(sprintf("DELETE FROM cidroute_config WHERE trunk = '%s'",
-				$db->escapeSimple($request['extdisplay']))); 
-		break;
-		case 'edtIncoming':	// deleting and adding as in core module
-			$results = sql(sprintf("DELETE FROM cidroute_config WHERE trunk = '%s'",
-				$db->escapeSimple($request['extdisplay']))); 
-			$results = sql(sprintf('INSERT INTO cidroute_config (trunk, enabled) VALUES ("%s", %d)', 
-				$db->escapeSimple($request['extdisplay']), $request['cidroute']));
+				}
+			}
 		break;
 	}
 }
 
-
-function cidroute_hookGet_config($engine) {
-	global $ext;  
-//	switch($engine) {
-//		case "asterisk":
-//			$pairing = cidroute_did_list();
-//			if(is_array($pairing)) {
-//				foreach($pairing as $item) {
-//					if ($item['cidroute_id'] != 0) {
-//
-//						// Code from modules/core/functions.inc.php core_get_config inbound routes
-//						$exten = trim($item['extension']);
-//						$cidnum = trim($item['cidnum']);
-//						
-//						if ($cidnum != '' && $exten == '') {
-//							$exten = '_.';
-//							$pricid = ($item['pricid']) ? true:false;
-//						} else if (($cidnum != '' && $exten != '') || ($cidnum == '' && $exten == '')) {
-//							$pricid = true;
-//						} else {
-//							$pricid = false;
-//						}
-//						$context = ($pricid) ? "ext-did-0001":"ext-did-0002";
-//
-//						$exten = (empty($exten)?"s":$exten);
-//						$exten = $exten.(empty($cidnum)?"":"/".$cidnum); //if a CID num is defined, add it
-//
-//						$ext->splice($context, $exten, 1, new ext_gosub('1', 'cidroute_'.$item['cidroute_id'], 'cidroute'));
-//					
-//					}
-//				}
-//			}
-//		break;
-//	}
+function cidroute_get_trunks() {
+	$res = sql("select trunk from cidroute_config where enabled='1'", "getAll");
+	if (is_array($res)) {
+		foreach ($res as $r) {
+			$arr[]=$r[0];
+		}
+		return $res;
+	}
+	return null;
 }
-
-/*
-// 	Generates dialplan for cidroute, call from retrieve_conf
-*/
-
-function cidroute_get_config($engine) {
-	global $ext; 
-	global $asterisk_conf;
-//	switch($engine) {
-//		case "asterisk":
-//			$sources = cidroute_list();
-//			if(is_array($sources)) {
-//				foreach($sources as $item) {
-//
-//					// Search for number in the cache, if found lookupcidnum and return
-//					if ($item['cidroute_id'] != 0)	{
-//						if ($item['cache'] == 1 && $item['sourcetype'] != 'internal') {
-//							$ext->add('cidroute', 'cidroute_'.$item['cidroute_id'], '', new ext_gotoif('$[${DB_EXISTS(cidname/${CALLERID(num)})} = 1]', 'cidroute,cidroute_return,1'));
-//						}
-//					}
-//
-//					switch($item['sourcetype']) {
-//
-//						case "internal":
-//							$ext->add('cidroute', 'cidroute_'.$item['cidroute_id'], '', new ext_lookupcidname(''));
-//						break;
-//
-//						case "enum":
-//							$ext->add('cidroute', 'cidroute_'.$item['cidroute_id'], '', new ext_txtcidname('${CALLERID(num)}'));
-//							$ext->add('cidroute', 'cidroute_'.$item['cidroute_id'], '', new ext_setvar('CALLERID(name)', '${TXTCIDNAME}'));
-//						break;
-//
-//						case "http":
-//							if (!empty($item['http_username']) && !empty($item['http_password']))
-//								$auth = sprintf('%s:%s@', $item['http_username'], $item['http_password']);
-//							else
-//								$auth = '';
-//								
-//							if (!empty($item['http_port']))
-//								$host = sprintf('%s:%d', $item['http_host'], $item['http_port']);
-//							else
-//								$host = $item['http_host'].':80';
-//
-//							if (substr($item['http_path'], 0, 1) == '/')
-//								$path = substr($item['http_path'], 1);
-//							else
-//								$path = $item['http_path'];
-//								
-//							$query = str_replace('[NUMBER]', '${CALLERID(num)}', $item['http_query']);
-//							$url = sprintf('http://%s%s/%s?%s', $auth, $host, $path, $query);
-//							$curl = sprintf('${CURL(%s)}', $url);
-//							
-//							$ext->add('cidroute', 'cidroute_'.$item['cidroute_id'], '', new ext_setvar('CALLERID(name)', $curl));
-//						break;
-//
-//						case "mysql":
-//							//Escaping MySQL query - thanks to http://www.asteriskgui.com/index.php?get=utilities-mysqlscape
-//
-//							$replacements = array (
-//							  	'\\' => '\\\\',
-//							  	'"' => '\\"',
-//							  	'\'' => '\\\'',
-//							  	' ' => '\\ ',
-//							  	',' => '\\,',
-//							  	'(' => '\\(',
-//							  	')' => '\\)',
-//							  	'.' => '\\.',
-//							  	'|' => '\\|'
-//							);
-//							
-//							$query = str_replace(array_keys($replacements), array_values($replacements), $item['mysql_query']);
-//							$query = str_replace('[NUMBER]', '${CALLERID(num)}', $query);
-//
-//							$ext->add('cidroute', 'cidroute_'.$item['cidroute_id'], '', new ext_mysql_connect('connid', $item['mysql_host'],  $item['mysql_username'],  $item['mysql_password'],  $item['mysql_dbname']));							
-//							$ext->add('cidroute', 'cidroute_'.$item['cidroute_id'], '', new ext_mysql_query('resultid', 'connid', $query));
-//							$ext->add('cidroute', 'cidroute_'.$item['cidroute_id'], '', new ext_mysql_fetch('fetchid', 'resultid', 'CALLERID(name)'));
-//							$ext->add('cidroute', 'cidroute_'.$item['cidroute_id'], '', new ext_mysql_clear('resultid'));							
-//							$ext->add('cidroute', 'cidroute_'.$item['cidroute_id'], '', new ext_mysql_disconnect('connid'));
-//						break;
-//
-//						// TODO: implement SugarCRM lookup, look at code snippet at http://nerdvittles.com/index.php?p=82
-//						case "sugarcrm":
-//							$ext->add('cidroute', 'cidroute_'.$item['cidroute_id'], '', new ext_noop('SugarCRM not yet implemented'));
-//							$ext->add('cidroute', 'cidroute_'.$item['cidroute_id'], '', new ext_return(''));
-//						break;
-//					}
-//
-//					// Put numbers in the cache
-//					if ($item['cidroute_id'] != 0)	{
-//						if ($item['cache'] == 1 && $item['sourcetype'] != 'internal') {
-//							$ext->add('cidroute', 'cidroute_'.$item['cidroute_id'], '', new ext_db_put('cidname', '${CALLERID(num)}', '${CALLERID(name)}' ));
-//						}
-//						$ext->add('cidroute', 'cidroute_'.$item['cidroute_id'], '', new ext_return(''));
-//					}
-//				}
-//
-//				$ext->add('cidroute', 'cidroute_return', '', new ext_lookupcidname(''));
-//				$ext->add('cidroute', 'cidroute_return', '', new ext_return(''));
-//			}
-//		break;
-//	}
-}
-
+	
+	
 
 function cidroute_list() {
 	$results = sql("SELECT * FROM cidroute_dests","getAll",DB_FETCHMODE_ASSOC);
@@ -232,11 +114,6 @@ function cidroute_list() {
 		}
 	}
 	return isset($dests)?$dests:null;
-}
-
-function cidroute_get($id){
-//	$results = sql("SELECT * FROM cidroute WHERE cidroute_id = '$id'","getRow",DB_FETCHMODE_ASSOC);
-	return isset($results)?$results:null;
 }
 
 function cidroute_del($id){
@@ -313,26 +190,4 @@ function cidroute_alter($post){
 	}
 }
 
-function cidroute_delmaps($post){
-	global $db;
-	if (isset($post['myselect'])) {
-		// Javascript combo box didn't work..
-		$res = $post['myselect'];
-	} elseif (isset($post['myselect_right'])) {
-		$res = $post['myselect_right'];
-	} else {
-		return;
-	}
-	foreach ($res as $r) {
-		$arr = explode("|", $r);
-		$q = "delete from cidroute_matches where min_numb='".$arr[0]."' and max_numb='".$arr[1]."'";
-		sql($q);
-	}	
-}
-
-// ensures post vars is valid
-function cidroute_chk($post){
-	// TODO: Add sanity checks on $_POST
-	return true;
-}
 ?>
