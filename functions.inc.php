@@ -190,4 +190,21 @@ function cidroute_alter($post){
 	}
 }
 
+function cidroute_delmaps($post){ 
+	global $db; 
+	if (isset($post['myselect'])) { 
+		// Javascript combo box didn't work.. 
+			$res = $post['myselect']; 
+		} elseif (isset($post['myselect_right'])) { 
+			$res = $post['myselect_right']; 
+		} else { 
+			return; 
+		} 
+	foreach ($res as $r) { 
+		$arr = explode("|", $r); 
+		$q = "delete from cidroute_matches where min_numb='".$arr[0]."' and max_numb='".$arr[1]."'"; 
+		sql($q); 
+	}        
+} 
 ?>
+
