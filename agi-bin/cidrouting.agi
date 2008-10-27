@@ -65,7 +65,7 @@ if (!isset($cidnum) || !is_numeric($cidnum) || strlen($cidnum) < 5) {
 	debug("CallerID not Parseable or too short - received $cidnum - exiting",1);
 	exit;
 }
-debug("Searching for CallerID '$cidnum' in lookup tables",1);
+debug("Searching for CallerID '$cidnum' in lookup tables",2);
 
 // It's a Valid CallerID Number
 parse_amportal_conf("/etc/amportal.conf");
@@ -83,14 +83,15 @@ if (!function_exists("die_freepbx")) {
 	}
 }
 // See if it's an 'override' number..
-$res = sql("select dest from cidroute_override where number='".$cidnum."'", "getRow");
+$res = sql("select dest,name from cidroute_override where number='".$cidnum."'", "getRow");
 if (isset($res[0])) {
 	if (strlen($res[0]) != 0) {
 		debug("CIDRouting: (Override) Found a result {$res[0]}", 2);
-		dial($res[0]);
+		dial($res[0],"Override:".$res[1]);
 		exit;
 	} else {
 		debug("** ERROR: CIDRouting: (Override) Found a result, but it's EMPTY", 0);
+		$AGI->set_variable("CALLERID(name)", "OVERRIDE ERROR - EMPTY");
 		exit;
 	}
 } else {
@@ -98,17 +99,28 @@ if (isset($res[0])) {
 }
 
 // Lets see if it's in the _matches database..
-$q = "select cidroute_dests.dest from cidroute_dests join cidroute_matches on cidroute_dests.destid=cidroute_matches.dest where '$cidnum' >= min_numb and '$cidnum' <= max_numb";
+$q = "select cidroute_dests.dest,cidroute_dests.name from cidroute_dests join cidroute_matches on cidroute_dests.destid=cidroute_matches.dest where '$cidnum' >= min_numb and '$cidnum' <= max_numb";
 $res = sql($q, "getRow");
 if (isset($res[0])) {
 	if (strlen($res[0]) != 0) {
 		debug("CIDRouting: (Lookup) Found a result - {$res[0]}", 2);
-		dial($res[0]);
+		dial($res[0],"Lookup:".$res[1]);
 	} else {
 		debug("** ERROR: CIDRouting: (Lookup) Found a result, but it's EMPTY", 0);
+		$AGI->set_variable("CALLERID(name)", "LOOKUP ERROR - EMPTY");
+		exit;
 	}
 } else {
 	debug("CIDRouting: (Lookup) No results - continuing on with standard dialplan", 1);
+	$q = "select state,region,localarea from cidroute_cidlist where '$cidnum' >= min_numb and '$cidnum' <= max_numb";
+	$res = sql($q, "getRow");
+	if (isset($res[0])) {
+		$AGI->set_variable("CALLERID(name)", $res[0]."/".$res[1]."/".$res[2]." not matched");
+		exit;
+	} else {
+		$AGI->set_variable("CALLERID(name)", "UNKNOWN NUMBER - $cidnum - Update Database");
+		exit;
+	}
 }
 
 // All the useful tools here..
@@ -149,9 +161,9 @@ function sql($sql,$type="query",$fetchmode=null) {
         return $results;
 }
 
-function goto($res) {
+function dial($res,$name) {
 	global $AGI;
-
+	$AGI->set_variable("CALLERID(name)", $name);
 	$arr=explode(",", $res);
 	$AGI->exec_dial($arr[0], $arr[1], $arr[2]);
 }
