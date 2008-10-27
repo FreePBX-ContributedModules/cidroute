@@ -194,7 +194,7 @@ function showEdit($itemid,$cidmaps)
 	print "<h3 id='title'>"._("Route")." ". $cidmaps[$itemid-1]['name'].":</h2></td>";
 
 ?>
-	<tr><td colspan=2><span id="instructions">Select the destination for the CID Groups below, then update the CallerID Groups to suit. Note that changes happen <em>immediately</em> without a need for a reload. (PS: No, they don't)</span></td></tr>
+	<tr><td colspan=2><span id="instructions">Select the destination for the CID Groups below, then update the CallerID Groups to suit. Note that changes to the routing happen as soon as you submit the form. There is no need for a standard reload.</span></td></tr>
         <tr><td colspan=2><h5><?php echo _("Destination")?>:<hr></h5>
         <input type="hidden" name="itemid" value="<? echo $itemid ?>">
         <input type="hidden" name="action" value="alter">
@@ -341,5 +341,8 @@ global $db;
 function showOverride() {
 	global $dispnum;
 	showHeader();
+	
+	print "<h2>Not implemented yet</h2>";
+	
 }
 ?>
