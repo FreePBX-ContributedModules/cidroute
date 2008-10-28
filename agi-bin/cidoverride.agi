@@ -86,9 +86,9 @@ debug("Previous call was from '".$cidnum['data']."'",3);
 parse_amportal_conf("/etc/amportal.conf");
 require_once($amp_conf['AMPWEBROOT']."/admin/common/db_connect.php");
 
-// Just incase something insane goes wrong wtih any of the sql queres, we grab the die_freepbx 
-// function and redirect it to agi->debug.. This SHOULDN'T exist here, unless for some insane 
-// reason that function has been moved into db_connect.php.  I really don't expect it to be, 
+// Just incase something insane goes wrong wtih any of the sql queries, we grab the die_freepbx 
+// function and redirect it to agi->debug.. This SHOULDN'T exist before here, unless for some 
+// insane reason that function has been moved into db_connect.php.  I really don't expect it to be, 
 // but hey. Better safe than sorry.
 
 if (!function_exists("die_freepbx")) {
@@ -111,10 +111,28 @@ if (is_array($res) && isset($res['state'])) {
 	$saystr = "<prosody rate='medium'> This number is in the state of ";
 	$tmp = str_split($res['state']);
 	foreach ($tmp as $char) { $saystr .= $char." "; }
-	$saystr .= ", and the region of ".$res['region'].",, with the local area called ";
+	$saystr .= ". The region is ".$res['region'].".  The local area is called ";
 	$saystr .= $res['localarea']."</prosody>";
-	say($saystr);
-	$res = check("If you would like me to repeat that, press one. If you would like me to spell that, press 2. To continue, press hash");
+	$saystr .= ". If you would like me to repeat that, press star. If you would like me to spell that, press 1. ";
+	$saystr .= "To continue, press hash. Press any other key to hang up.";
+	$check = say($saystr);
+	if ($check == null) {
+		$readkey=$AGI->wait_for_digit(5000);
+		if ($readkey['result'] == 0) {
+			$check = null;
+		} else {
+			$check = chr($readkey['result']);
+		}
+	} 
+	if ($check == "1") {
+		say_regions($res['state'], $res['region'], $res['localarea']);
+		$check = "#";
+	}
+	if ($check != "#") {
+		exit;
+	}
+	
+	say("OK, we're off and running then.");
 }
 
 
@@ -134,6 +152,62 @@ foreach ($res as $r) {
 $AGI->exec("swift", '"'.$str.'"');
 exit;
 	
+
+// Various Functions below here..
+function say_regions($state, $region, $area) {
+	global $AGI;
+	$repeat = true;
+	while ($repeat == true) {
+		$repeat = false;
+		say("The state is...");
+		$AGI->say_phonetic($state, "#");
+		say("The region is...");
+		$AGI->say_phonetic($region, "#");
+		say("The area is...");
+		$AGI->say_phonetic($area, "#");
+		$check = say("Press 1 to repeat, or hash to continue");
+		if ($check == null) {
+			$readkey=$AGI->wait_for_digit(5000);
+			if ($readkey['result'] == 0) {
+				$repeat = true;
+			} else {
+				$check = chr($readkey['result']);
+			}
+		} 
+		if ($check != "#") {
+			$repeat = true;
+		}
+	}
+}
+		
+
+
+// 'say' takes a string and says it! If you push '*' it will repeat. If you push anything else,
+// it will return what you push. If you don't push anything, it will return null.
+function say($str) {
+	global $AGI;
+
+	// I hate PHP. This could be done with a GOTO, but oh no, they don't WANT to implement
+	// a goto, because there was once a document written about GOTO's and how MOST OF THE TIME
+	// they make code unreadable. MOST OF THE TIME. You bastards. You think THIS is readable?
+	// Geez. This loops if a * has been pushed, basically. 
+	$repeat = true;
+	while ($repeat == true) {
+		$repeat = false;
+		$AGI->set_variable("SWIFT_DTMF", "unset");
+		$AGI->exec("swift", '"'.$str.'"');
+		$ret = $AGI->get_variable("SWIFT_DTMF");
+		if (isset($ret['data']) && $ret['data'] != "unset" && $ret['data'] !== "" ) {
+			if ($ret['data'] == "*")  {
+				$repeat = true;
+			} else {
+				return $ret['data'];
+			}
+		}
+	}
+	return null;
+}
+
 
 // All the useful tools here..
 function parse_amportal_conf($filename="/etc/amportal.conf") {
@@ -180,16 +254,4 @@ function dial($res,$name) {
 	$AGI->exec_dial($arr[0], $arr[1], $arr[2]);
 }
 
-function say($str) {
-	global $AGI;
-	$AGI->exec("swift", '"'.$str.'"');
-}
-
-function check($str) {
-	global $AGI;
-	say("If you would like me to repeat that, press one. If you would like me to spell that, press 2. To continue, press hash");
-	$res=$AGI->wait_for_digit(5000);
-}
-	
-	
 ?>
