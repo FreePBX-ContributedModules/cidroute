@@ -39,14 +39,14 @@
 
 /* 
   Overview of the CIDoverride AGI
-    * Grab the ID of this call. (Done)
-    * Get the previous calls CallerID (DB->Exten/CallTrace) (Done)
-    * Check to make sure it's not an internal call (Done)
+    * Grab the ID of this call. 
+    * Get the previous calls CallerID (DB->Exten/CallTrace)
+    * Check to make sure it's not an internal call
     * Say "The previous call from (number) was not found/was found in (tts->localarea)
     * Say "This call would be sent to (tts->cidroute_matches.name)/would be ignored"
-    * Say "To update this, press 1."
+    * Say "To update this, press 1." (Changed this.. I'll get user feedback on what they prefer)
     * If 1, then:
-    *  If found in an existing group, 
+    *  If found in an existing group,  
     *   prompt to send all numbers in that group to the destination selected
     *   If yes, say number range
     *  Say "Please select the destination from the following"
@@ -60,6 +60,9 @@
     *   If they're picking a range, update cid_matches
     *   If they're picking a number, update cid_override
     *  Say Update Complete, Thank you, goodbye
+
+    * All complete!
+	
 
 */
 
@@ -78,7 +81,6 @@ debug("Starting CIDoverride.agi", 1);
 
 debug("Searching for previous call to Exten '$cidnum' in lookup tables",2);
 $cidnum = $AGI->database_get("CALLTRACE", $mynum);
-$cidnum['data'] = 295461936;
 
 debug("Previous call was from '".$cidnum['data']."'",3);
 
@@ -111,8 +113,7 @@ $res = sql($q, "getRow",DB_FETCHMODE_ASSOC);
 // If it is..
 if (is_array($res) && isset($res['state'])) {
 	debug("Found State:".$res['state'].", Region:".$res['region']." LocalArea:".$res['localarea'], 3);
-	$saystr = "This number is in the state: ";
-	$dest = select_destination();
+	$saystr = "This number is in the state of: ";
 	$tmp = str_split($res['state']);
 	foreach ($tmp as $char) { $saystr .= strtolower($char." "); }
 	$saystr .= ". The region is: ".$res['region'].".  The local area is called: ".$res['localarea'];
@@ -126,26 +127,95 @@ if (is_array($res) && isset($res['state'])) {
 	if ($check != "#") {
 		exit;
 	}
+	// select_destination() returns:
+	//     Array(name => 'text name', id => cidroute_matches.destid)
 	$dest = select_destination();
 	$check = say_and_get("If you would like to alter just this number, press 1. If you would like to alter the entire range, press 2");
 	if ($check == "1") {
-		// This function exits; when finished.
 		add_override($dest,$cidnum['data']);
 	} elseif ($check == "2") {
-		// This function exits; when finished.
 		modify_range($dest,$cidnum['data']);
 	}
-	
 } else {
-	// It's not in a previously known range, so warn and add the number.
+	// A CallerID number NOT in the database. This means there's stuff missing from there. 
+	say("The Caller ID number selected is not in the database. You can only add an override. Contact Support");
+	add_override($dest,$cidnum['data']);
 }
 
-say("OK, we're off and running then.");
-
-
+say ("Goodbye");
 exit;
 
+
 // Various Functions below here..
+
+// Add an override for one specific number.. 
+// $dest = Arryay('id' => db.destid, 'name' => descriptive name of the match)
+// $cid = caller id of call you want to change
+function add_override($dest,$cid) {
+	global $AGI;
+
+	say("To confirm that you want to send only the caller ID number");
+	$AGI->say_digits($cid);
+	$saystr =  "to ".$dest['name'].", you must push 5. Any other button will abort. Changes will happen immediately";
+	$res = say_and_get($saystr);
+	if ($res == "5") {
+		$q = "delete from cidroute_override where number='".$cid."'", "query");
+		sql("insert into cidroute_override (name, number, dest) values ('Via Phone', $cid, ".$dest['id'].")", "query");
+	}
+	say("Update complete. Goodbye.");
+}
+
+// Add an override for a range of numbers
+// $dest = Arryay('id' => db.destid, 'name' => descriptive name of the match)
+// $cid = caller id of call you want to change
+function modify_range($dest,$cid) {
+	global $db;
+	global $AGI;
+	// We already check to make sure that this is part of a range, so we just need to grab the range
+	$q = "select localarea,min_numb,max_numb from cidroute_cidlist where '$cid' >= min_numb and '$cid' <= max_numb";
+	$res = sql($q, "getRow",DB_FETCHMODE_ASSOC);
+	if (!isset($res['min_numb'])) {
+		// The database said one thing 50msec ago, and something else now. Panic.
+		say("Severe Error Occured. Attemped to add a range that does not exist. Goodbye.");
+		exit;
+	}
+	$min_numb = $res['min_numb'];
+	$max_numb = $res['max_numb'];
+	$localarea = $res['localarea'];
+
+	// Check to make sure it's not already assigned to some place else.
+	$q = "select min_numb,dest from cidroute_matches where min_numb='$min_numb'";
+	$check = sql($q, "getRow", DB_FETCHMODE_ASSOC);
+
+	if (isset($check['min_numb'])) {
+		// It _IS_ assigned to someone else.
+		$prevdest = sql("select name,destid from cidroute_dests where destid='".$check['dest']."'", "getRow");
+		$confirm = say_and_get("This range is already assigned to: ".$prevdest[0].": If you are sure you wish to alter this, press 2 now");
+		if ($confirm != "2") {
+			say("Change Aborted. Goodbye.");
+			exit;
+		}
+	}
+	say("To confirm that you want to send the caller ID range from");
+	$AGI->say_digits($min_numb);
+	say("to");
+	$AGI->say_digits($max_numb);
+	$saystr = "which is part of the area: ".$localarea.", to: ".$dest['name'].": you must push 5. Any other button will abort. ";
+	$saystr .= "Changes will happen immediately.";
+	$res = say($saystr);
+	if ($res == "5") {
+		sql("delete from cidroute_matches where min_numb='$min_numb' and max_numb='$max_numb'", "query");
+		$q = "insert into cidroute_matches (name, country, areacode, min_numb, max_numb, dest) values ";
+		$q .=   "('Via Phone', 'au', 99, '$min_numb', '$max_numb', '".$dest['id']."')";
+		sql($q, "query");
+		say("Update complete. Goodbye.");
+		exit;
+	} else {
+		say("Change Aborted. Goodbye.");
+		exit;
+	}
+}
+
 
 function select_destination() {
 	global $db;
@@ -164,7 +234,7 @@ function select_destination() {
 		$multiple = true;
 	}
 
-	$saystr="Please select the destination. ".count($data);
+	$saystr="Please select the destination for this number. ".count($data);
 	if (!$multiple) {
 		while (1) {
 			for ($i=0; $i < count($data); $i++) {
@@ -177,7 +247,6 @@ function select_destination() {
 			}
 			break;
 		}
-		say("You selected $res, which is ".$data[$res][1]);
 	} else {
 	   //Multiple. Need to care about pointers!
 		// Start at zero.
@@ -217,13 +286,10 @@ function select_destination() {
 				say ("Invalid Selection");
 			}
 		}
-		say("You selected ".$data[$res+$pointer][1]);
 	}
+	return(Array('name' => $data[$res+$pointer][1], 'id' => $res+$pointer));
 }
-		
 
-	
-	
 function say_regions($state, $region, $area) {
 	global $AGI;
 	$repeat = true;
@@ -236,13 +302,11 @@ function say_regions($state, $region, $area) {
 		say("The area is...");
 		$AGI->say_phonetic($area, "#");
 		$check = say_and_get("Press 1 to repeat, or hash to continue");
-		print_r($check);
 		if ($check != "#") {
 			$repeat = true;
 		}
 	}
 }
-		
 
 
 function say_and_get($str) {
@@ -251,7 +315,6 @@ function say_and_get($str) {
 	while ($repeat == true) {
 		$repeat = false;
 		$res = say($str);
-		print_r($res);
 		if ($res == null) {
 			$readkey=$AGI->wait_for_digit(5000);
 			if ($readkey['result'] == 0) {
@@ -265,7 +328,6 @@ function say_and_get($str) {
 	return $val;
 	}
 }
-		
 
 // 'say' takes a string and says it! If you push '*' it will repeat. If you push anything else,
 // it will return what you push. If you don't push anything, it will return null.
@@ -333,6 +395,8 @@ function debug($string, $level=3) {
 
 function sql($sql,$type="query",$fetchmode=null) {
         global $db;
+	
+	debug("CIDoverride db: $sql", 4);
         $results = $db->$type($sql,$fetchmode);
         if(DB::IsError($results)) {
                 die_freepbx($results->getDebugInfo() . "SQL - <br> $sql" );
