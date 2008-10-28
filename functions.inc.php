@@ -116,10 +116,16 @@ function cidroute_list() {
 	return isset($dests)?$dests:null;
 }
 
-function cidroute_del($id){
-	// Deleting source and its associations
-//	$results = sql("DELETE FROM cidroute WHERE cidroute_id = '$id'","query");
-//	$results = sql("DELETE FROM cidroute_incoming WHERE cidroute_id = '$id'","query");
+function cidroute_del($post){
+	global $db;
+	$itemid = $db->escapeSimple($post['itemid']);
+	// Delete any references to the map in matches...
+	$results = sql("DELETE FROM cidroute_matches WHERE dest = '$itemid'","query");
+	// Delete any references to the map in overrides...
+	$results = sql("DELETE FROM cidroute_override WHERE dest = '$itemid'","query");
+	// Delete the map..
+	$results = sql("DELETE FROM cidroute_dests WHERE destid = '$itemid'","query");
+	// All gone!
 }
 
 function cidroute_add($post){

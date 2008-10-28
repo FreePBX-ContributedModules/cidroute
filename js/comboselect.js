@@ -38,13 +38,13 @@
 			
 			// build the combo box
 			combo += '<fieldset class="comboselect">';
-			combo += '<select id="' + leftID + '" name="' + leftID + '" class="csleft" multiple="multiple">';
+			combo += '<select id="' + leftID + '" name="' + leftID + '" class="csleft" multiple="multiple" style="width:45%">';
 			combo += '</select>';
 			combo += '<fieldset>';
 			combo += '<input type="button" class="csadd" value="' + settings.addbtn + '" />';
 			combo += '<input type="button" class="csremove" value="' + settings.rembtn + '" />';
 			combo += '</fieldset>';
-			combo += '<select id="' + rightID + '" name="' + rightID + '[]" class="csright" multiple="multiple">';
+			combo += '<select id="' + rightID + '" name="' + rightID + '[]" class="csright" multiple="multiple" style="width:45%">';
 			combo += '</select>';
 			combo += '</fieldset>';		
 		

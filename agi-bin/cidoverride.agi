@@ -164,13 +164,19 @@ function select_destination() {
 		$multiple = true;
 	}
 
-	// Grab the list of the destinations
 	$saystr="Please select the destination. ".count($data);
 	if (!$multiple) {
-		for ($i=0; $i < count($data); $i++) {
-			$saystr .= "Press $i for site ".$data[$i][1].". ";
+		while (1) {
+			for ($i=0; $i < count($data); $i++) {
+				$saystr .= "Press $i for  ".$data[$i][1].". ";
+			}
+			$res = say_and_get($saystr);
+			if (!isset($data[$res+$pointer])) {
+				say ("Invalid Selection");
+				continue;
+			}
+			break;
 		}
-		$res = say_and_get($saystr);
 		say("You selected $res, which is ".$data[$res][1]);
 	} else {
 	   //Multiple. Need to care about pointers!
@@ -180,10 +186,9 @@ function select_destination() {
 		$loop = true;
 		say("Please select the destination.");
 		while ($loop == true) {
-			$loop = false;
 			$saystr="";
 			for ($i=0; isset($data[$i+$pointer]) && $i <= 7; $i++) {
-				$saystr .= "Press $i for site ".$data[$pointer+$i][1].". ";
+				$saystr .= "Press $i for ".$data[$pointer+$i][1].". ";
 			}
 			if (isset($data[$pointer+8])) {
 				$saystr .= "Press 9 to move forwards. ";
@@ -193,28 +198,23 @@ function select_destination() {
 			}
 			$res=say_and_get($saystr);
 			if ($res === null || !is_numeric($res)) {
-				$loop = true;
 				continue;
 			}
 			// 8 and 9 are forward-and-backwards..
 			if ($res == "8" || $res == "9") {
-				if ($res == 8 && isset($data[$pointer-8])) {
+				if ($res == "8" && isset($data[$pointer-8])) {
 					$pointer = $pointer - 8;
-					$loop = true;
 					continue;
 				} elseif ($res == "9" && isset($data[$pointer+8])) {
 					$pointer = $pointer + 8;
-					$loop = true;
 					continue;
 				} else {
 					say ("Invalid Selection");
-					$loop = true;
 				}
 			} elseif (isset($data[$res+$pointer])) {
 				break;
 			} else {
 				say ("Invalid Selection");
-				$loop = true;
 			}
 		}
 		say("You selected ".$data[$res+$pointer][1]);

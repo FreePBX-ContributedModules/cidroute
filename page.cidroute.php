@@ -49,8 +49,6 @@ $cidmaps = cidroute_list();
 
 //if submitting form, update database
 if(isset($_REQUEST['action'])) {
-	print "I have an action\n";
-	print_r($_REQUEST);
 	switch ($action) {
 		case "add":
 			cidroute_add($_REQUEST);
@@ -70,11 +68,20 @@ if(isset($_REQUEST['action'])) {
 		case "override":
 			showOverride();
 		break;
+		case "delete":
+			cidroute_del($_REQUEST);
+			$oldname = $cidmaps[$_REQUEST['itemid']]['name'];
+			$cidmaps = cidroute_list();
+			showHeader();
+			echo "<h3>Route ".urlencode($_REQUEST['itemid'])." ($oldname)  deleted.</h3>";
+			showNew();
 		case "*":
+			showHeader();
 			showNew();
 		break;
 	}
 } else {
+	showHeader();
 	showNew();
 }
 
@@ -108,17 +115,40 @@ if (isset($cidmaps)) {
 	
 function showNew() {
 	global $dispnum;
-	showHeader();
 ?>
-	<h3 id='title'><?php echo _("Caller Location Based Routing") ?></h2></td>
+	<h2 id='title'><?php echo _("Caller Location Based Routing") ?></h2></td>
 	<tr><td colspan=2><span id="instructions">
 <?php
+	echo "<p><h3>"._("Overview"); echo "</h3></p> ";
 	echo "<p>"._("Caller Location Based Routing"); echo " ";
 	echo _("lets you set the desination of the call based on the CallerID of the Caller."); echo " ";
 	echo _(" This is used to provide caller-location-dependent services, such as may be used in a franchise of multiple stores that want to provide the one public phone number, and route calls dependant on the callers location."); echo "</p>";
 	echo "<p><em>"._("Note that this module, unlike most others, requires the database to be available AT ALL TIMES."); echo "</em></p>";
+
 	// Yes, this isn't translated. There's no use translating it yet, because Australia only speaks English.
-	// Take it out when we've actually got some other exchanges!
+	// I've deliberately NOT left this translateable because I need Phone/Exchange details for YOUR COUNTRY.
+	// You, the person who is translating this. Go dig up something that looks like this:
+
+	// State (if you have states)
+
+	// Regions (eg, 'London', 'South East', 'East', 'East Midlands') 
+	//  -- Taken from http://en.wikipedia.org/wiki/Regions_of_England
+
+	// Local Areas ('City of London', 'City of Westminister', 'Kensington and Chelsea') etc.
+	//  -- Taken from http://en.wikipedia.org/wiki/Greater_London
+
+	// Feel free to fudge those around - you have three 'Sorting' groups. Maybe, something
+	// like Region->County->Exchange - however you want to do it, you can change the names in 
+	// the translation. Note that you don't NEED to use all 3. You can use just one, if that's
+	// the best you can do. (eg, Sweden, apparently, has huge areas with portable numbers)
+
+	// When you have the exchanges, I need a number RANGE for them. This maybe something like
+	// 6120000 - 6199999 and 61200000 - 61999999 for an exchange in areacode 61 with 5 
+	// _and_ 6 digit numbers, where the first digit of the phone number can't start with a 1.
+
+	// Package that all up, and send it to xrobau@gmail.com and keep harassing me about it until 
+	// it appears in a module update. 
+
 	echo "<p>This module currently only supports AUSTRALIA. Other countries will follow as soon as the exchange mappings are provided</p>";
 	echo "<p>"._("You enable or disable the Caller Location Based Routing on the Inbound Routes page.")." ";
 	echo _("When that is enabled, calls are first checked against the list of CallerID Ranges here.")." ";
@@ -152,11 +182,6 @@ echo drawselects(0,0);
 }
 
 
-
-
-
-
-
 function showEdit($itemid,$cidmaps) 
 {
 
@@ -166,7 +191,7 @@ function showEdit($itemid,$cidmaps)
 	<input type=\"hidden\" name=\"display\" value=\"cidroute\">
 	<input type=\"hidden\" name=\"itemid\" value=\"{$itemid}\">
 	<input type=\"hidden\" name=\"action\" value=\"delete\">
-	<input type=submit value=\""._("Delete Route Map")."\">
+	<input type=submit value=\""._("Delete this Route")."\">
 </form>";
 ?>
 <style>
@@ -187,14 +212,19 @@ function showEdit($itemid,$cidmaps)
 <div id="loading">Loading ...</div>
 <table>
 	<tr><td style="width:10%"></td><td style="width:90%"></td>
-	<tr><td colspan=2><h2 id="title">Manage CID Groups</h2></td></tr>
+	<tr><td colspan=2><h2 id="title"><?php echo _("Caller Location Based Routing"); ?></h2></td></tr>
 	
 <tr><td colspan=2>
 <?php
 	print "<h3 id='title'>"._("Route")." ". $cidmaps[$itemid-1]['name'].":</h2></td>";
 
 ?>
-	<tr><td colspan=2><span id="instructions">Select the destination for the CID Groups below, then update the CallerID Groups to suit. Note that changes to the routing happen as soon as you submit the form. There is no need for a standard reload.</span></td></tr>
+	<tr><td colspan=2><span id="instructions"><?php 
+	echo _("Select the destination for the CID Groups below, and update the CallerID Groups to suit."); 
+	echo _("Note that changes to the routing happen as soon as you submit the form.");
+	echo _(" There is no need for a standard reload.");
+	?></span></td></tr>
+	<tr><td><?php echo $delButton; ?></td></tr>
         <tr><td colspan=2><h5><?php echo _("Destination")?>:<hr></h5>
         <input type="hidden" name="itemid" value="<? echo $itemid ?>">
         <input type="hidden" name="action" value="alter">
