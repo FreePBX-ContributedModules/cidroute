@@ -39,9 +39,9 @@
 
 /* 
   Overview of the CIDoverride AGI
-    * Grab the ID of this call.
-    * Get the previous calls CallerID (DB->Exten/CallTrace)
-    * Check to make sure it's not an internal call 
+    * Grab the ID of this call. (Done)
+    * Get the previous calls CallerID (DB->Exten/CallTrace) (Done)
+    * Check to make sure it's not an internal call (Done)
     * Say "The previous call from (number) was not found/was found in (tts->localarea)
     * Say "This call would be sent to (tts->cidroute_matches.name)/would be ignored"
     * Say "To update this, press 1."
@@ -96,6 +96,8 @@ if (!function_exists("die_freepbx")) {
 		debug($var,0);
 	}
 }
+
+// Begin!
 $res = sql("select count(*) from users,devices where users.extension=".$cidnum['data']." or devices.id=".$cidnum['data'], "getRow");
 if ($res[0] != 0) {
 	// It's an existing extension. Can't do it.
@@ -106,24 +108,16 @@ if ($res[0] != 0) {
 // Check to see if the CID is in a range we already know about.
 $q = "select state,region,localarea from cidroute_cidlist where '{$cidnum['data']}' >= min_numb and '{$cidnum['data']}' <= max_numb";
 $res = sql($q, "getRow",DB_FETCHMODE_ASSOC);
+// If it is..
 if (is_array($res) && isset($res['state'])) {
 	debug("Found State:".$res['state'].", Region:".$res['region']." LocalArea:".$res['localarea'], 3);
-	$saystr = "<prosody rate='medium'> This number is in the state of ";
+	$saystr = "This number is in the state: ";
 	$tmp = str_split($res['state']);
-	foreach ($tmp as $char) { $saystr .= $char." "; }
-	$saystr .= ". The region is ".$res['region'].".  The local area is called ";
-	$saystr .= $res['localarea']."</prosody>";
-	$saystr .= ". If you would like me to repeat that, press star. If you would like me to spell that, press 1. ";
+	foreach ($tmp as $char) { $saystr .= strtolower($char." "); }
+	$saystr .= ". The region is: ".$res['region'].".  The local area is called: ".$res['localarea'];
+	$saystr .= ": If you would like me to repeat that, press star. If you would like me to spell that, press 1. ";
 	$saystr .= "To continue, press hash. Press any other key to hang up.";
-	$check = say($saystr);
-	if ($check == null) {
-		$readkey=$AGI->wait_for_digit(5000);
-		if ($readkey['result'] == 0) {
-			$check = null;
-		} else {
-			$check = chr($readkey['result']);
-		}
-	} 
+	$check = say_and_get($saystr);
 	if ($check == "1") {
 		say_regions($res['state'], $res['region'], $res['localarea']);
 		$check = "#";
@@ -131,29 +125,76 @@ if (is_array($res) && isset($res['state'])) {
 	if ($check != "#") {
 		exit;
 	}
+	$dest = select_destination();
+	$check = say_and_get("If you would like to alter just this number, press 1. If you would like to alter the entire range, press 2");
+	if ($check == "1") {
+		// This function exits; when finished.
+		add_override($dest,$cidnum['data']);
+	} elseif ($check == "2") {
+		// This function exits; when finished.
+		modify_range($dest,$cidnum['data']);
+	}
 	
-	say("OK, we're off and running then.");
+} else {
+	// It's not in a previously known range, so warn and add the number.
 }
 
+say("OK, we're off and running then.");
+
 
 exit;
-
-
-
-
-
-
-$q = "select distinct(localarea) from cidroute_cidlist order by RAND() limit 10";
-$res = sql($q, "getAll");
-$str = "Begin. ";
-foreach ($res as $r) {
-	$str .= ", ".$r[0];
-	}
-$AGI->exec("swift", '"'.$str.'"');
-exit;
-	
 
 // Various Functions below here..
+
+function add_override($
+
+function select_destination() {
+	global $db;
+	global $AGI;
+
+	// 8 or less destinations..
+	$multiple = false;
+
+	// Get the list of destinations from cidroute_dests
+	$count = sql("select count(name) from cidroute_dests","getRow");
+	if ($count[0] == 0) {
+		say("Sorry, there doesn't seem to be any desinations created. Please add these via the web page.");
+		exit;
+	}
+	if ($count[0] > 8) {
+		say("More than 8 destinations have been selected. Use 7 and 9 to move backwards and forwards.");
+		$multiple = true;
+	}
+
+	// Grab the list of the destinations
+	$data = sql("select destid, name from cidroute_dests", "getAll");
+	$saystr="Please select the destination. ";
+	if (!$multiple) {
+		for ($i=0; $i <= count($data); $i++) {
+			$saystr .= "Press $i for site ".$data[$i][1].". ";
+		}
+		$res = say_and_get($saystr);
+		say("You selected $res, which is ".$data[$res][1]);
+	} else {
+	   //Multiple. Need to care about pointers!
+		// Start at zero.
+		$pointer = 0;
+		// Yes, PHP's lack of gotos DOES INDEED suck.
+		$loop = true;
+		while ($loop == true) {
+			$loop = false;
+			$saystr="Please select the destination. ";
+			for ($i=$pointer; $i <= count($data) && $i <= $pointer+8; $i++) {
+				$saystr .= "Press $i for site ".$data[$i][1].". ";
+			}
+			if ($pointer >= 8 && isset($)
+				$saystr .= "Press	 
+			
+}
+		
+
+	
+	
 function say_regions($state, $region, $area) {
 	global $AGI;
 	$repeat = true;
@@ -165,15 +206,8 @@ function say_regions($state, $region, $area) {
 		$AGI->say_phonetic($region, "#");
 		say("The area is...");
 		$AGI->say_phonetic($area, "#");
-		$check = say("Press 1 to repeat, or hash to continue");
-		if ($check == null) {
-			$readkey=$AGI->wait_for_digit(5000);
-			if ($readkey['result'] == 0) {
-				$repeat = true;
-			} else {
-				$check = chr($readkey['result']);
-			}
-		} 
+		$check = say_and_get("Press 1 to repeat, or hash to continue");
+		print_r($check);
 		if ($check != "#") {
 			$repeat = true;
 		}
@@ -181,6 +215,28 @@ function say_regions($state, $region, $area) {
 }
 		
 
+
+function say_and_get($str) {
+	global $AGI;
+	$repeat = true;
+	while ($repeat == true) {
+		$repeat = false;
+		$res = say($str);
+		print_r($res);
+		if ($res == null) {
+			$readkey=$AGI->wait_for_digit(5000);
+			if ($readkey['result'] == 0) {
+				$repeat = true;
+			} else {
+				$val = chr($readkey['result']);
+			}
+		} else {
+			$val = $res;
+		}
+	return $val;
+	}
+}
+		
 
 // 'say' takes a string and says it! If you push '*' it will repeat. If you push anything else,
 // it will return what you push. If you don't push anything, it will return null.
@@ -194,6 +250,14 @@ function say($str) {
 	$repeat = true;
 	while ($repeat == true) {
 		$repeat = false;
+		// For some reason, phpagi is sending back the character I pushed.  Putting a Noop here
+		// fixes it, but there is a bug somewhere.  FIXME
+		// AGI Rx << WAIT FOR DIGIT 5000
+		// AGI Tx >> 200 result=35
+		// AGI Rx << #NOOP    <-- Here, there is # before NOOP.
+		// AGI Tx >> 510 Invalid or unknown command
+
+		$AGI->noop("Null");
 		$AGI->set_variable("SWIFT_DTMF", "unset");
 		$AGI->exec("swift", '"'.$str.'"');
 		$ret = $AGI->get_variable("SWIFT_DTMF");
