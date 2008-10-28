@@ -112,6 +112,7 @@ $res = sql($q, "getRow",DB_FETCHMODE_ASSOC);
 if (is_array($res) && isset($res['state'])) {
 	debug("Found State:".$res['state'].", Region:".$res['region']." LocalArea:".$res['localarea'], 3);
 	$saystr = "This number is in the state: ";
+	$dest = select_destination();
 	$tmp = str_split($res['state']);
 	foreach ($tmp as $char) { $saystr .= strtolower($char." "); }
 	$saystr .= ". The region is: ".$res['region'].".  The local area is called: ".$res['localarea'];
@@ -146,8 +147,6 @@ exit;
 
 // Various Functions below here..
 
-function add_override($
-
 function select_destination() {
 	global $db;
 	global $AGI;
@@ -156,21 +155,19 @@ function select_destination() {
 	$multiple = false;
 
 	// Get the list of destinations from cidroute_dests
-	$count = sql("select count(name) from cidroute_dests","getRow");
-	if ($count[0] == 0) {
+	$data = sql("select destid, name from cidroute_dests", "getAll");
+	if (!isset($data[0])) {
 		say("Sorry, there doesn't seem to be any desinations created. Please add these via the web page.");
 		exit;
 	}
-	if ($count[0] > 8) {
-		say("More than 8 destinations have been selected. Use 7 and 9 to move backwards and forwards.");
+	if (count($data)>8) {
 		$multiple = true;
 	}
 
 	// Grab the list of the destinations
-	$data = sql("select destid, name from cidroute_dests", "getAll");
-	$saystr="Please select the destination. ";
+	$saystr="Please select the destination. ".count($data);
 	if (!$multiple) {
-		for ($i=0; $i <= count($data); $i++) {
+		for ($i=0; $i < count($data); $i++) {
 			$saystr .= "Press $i for site ".$data[$i][1].". ";
 		}
 		$res = say_and_get($saystr);
@@ -181,15 +178,47 @@ function select_destination() {
 		$pointer = 0;
 		// Yes, PHP's lack of gotos DOES INDEED suck.
 		$loop = true;
+		say("Please select the destination.");
 		while ($loop == true) {
 			$loop = false;
-			$saystr="Please select the destination. ";
-			for ($i=$pointer; $i <= count($data) && $i <= $pointer+8; $i++) {
-				$saystr .= "Press $i for site ".$data[$i][1].". ";
+			$saystr="";
+			for ($i=0; isset($data[$i+$pointer]) && $i <= 7; $i++) {
+				$saystr .= "Press $i for site ".$data[$pointer+$i][1].". ";
 			}
-			if ($pointer >= 8 && isset($)
-				$saystr .= "Press	 
-			
+			if (isset($data[$pointer+8])) {
+				$saystr .= "Press 9 to move forwards. ";
+			} 
+			if (isset($data[$pointer-8])) {
+				$saystr .= "Press 8 to move backwards. ";
+			}
+			$res=say_and_get($saystr);
+			if ($res === null || !is_numeric($res)) {
+				$loop = true;
+				continue;
+			}
+			// 8 and 9 are forward-and-backwards..
+			if ($res == "8" || $res == "9") {
+				if ($res == 8 && isset($data[$pointer-8])) {
+					$pointer = $pointer - 8;
+					$loop = true;
+					continue;
+				} elseif ($res == "9" && isset($data[$pointer+8])) {
+					$pointer = $pointer + 8;
+					$loop = true;
+					continue;
+				} else {
+					say ("Invalid Selection");
+					$loop = true;
+				}
+			} elseif (isset($data[$res+$pointer])) {
+				break;
+			} else {
+				say ("Invalid Selection");
+				$loop = true;
+			}
+		}
+		say("You selected ".$data[$res+$pointer][1]);
+	}
 }
 		
 
