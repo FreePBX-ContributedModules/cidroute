@@ -159,7 +159,7 @@ function add_override($dest,$cid) {
 	$saystr =  "to ".$dest['name'].", you must push 5. Any other button will abort. Changes will happen immediately";
 	$res = say_and_get($saystr);
 	if ($res == "5") {
-		$q = "delete from cidroute_override where number='".$cid."'", "query");
+		sql("delete from cidroute_override where number='".$cid."'", "query");
 		sql("insert into cidroute_override (name, number, dest) values ('Via Phone', $cid, ".$dest['id'].")", "query");
 	}
 	say("Update complete. Goodbye.");
@@ -312,21 +312,20 @@ function say_regions($state, $region, $area) {
 function say_and_get($str) {
 	global $AGI;
 	$repeat = true;
-	while ($repeat == true) {
-		$repeat = false;
+	while (1) {
 		$res = say($str);
-		if ($res == null) {
+		if ($res === null) {
 			$readkey=$AGI->wait_for_digit(5000);
-			if ($readkey['result'] == 0) {
-				$repeat = true;
-			} else {
+			if ($readkey['result'] != 0) {
 				$val = chr($readkey['result']);
+				break;
 			}
 		} else {
 			$val = $res;
+			break;
 		}
-	return $val;
 	}
+	return $val;
 }
 
 // 'say' takes a string and says it! If you push '*' it will repeat. If you push anything else,
