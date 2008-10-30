@@ -154,6 +154,7 @@ function debug($string, $level=3) {
 
 function sql($sql,$type="query",$fetchmode=null) {
         global $db;
+	debug("SQL Debug: $sql", 4);
         $results = $db->$type($sql,$fetchmode);
         if(DB::IsError($results)) {
                 die_freepbx($results->getDebugInfo() . "SQL - <br> $sql" );
@@ -165,7 +166,7 @@ function dial($res,$name) {
 	global $AGI;
 	$AGI->set_variable("CALLERID(name)", $name);
 	$arr=explode(",", $res);
-	$AGI->exec_dial($arr[0], $arr[1], $arr[2]);
+	$AGI->exec_goto($arr[0], $arr[1], $arr[2]);
 }
 	
 ?>

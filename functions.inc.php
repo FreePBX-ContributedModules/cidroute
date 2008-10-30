@@ -63,6 +63,28 @@ function cidroute_hook_core($viewing_itemid, $target_menuid) {
 	
 }
 
+function cidroute_hookProcess_core($viewing_itemid, $request) { 
+        if (!isset($request['action'])) 
+                return; 
+        global $db; 
+        switch ($request['action'])     { 
+                case 'addIncoming': 
+                        $results = sql(sprintf('INSERT INTO cidroute_config (trunk, enabled) VALUES ("%s", %d)',  
+				$db->escapeSimple($request['extdisplay']), $request['cidroute'])); 
+		break; 
+		case 'delIncoming': 
+			$results = sql(sprintf("DELETE FROM cidroute_config WHERE trunk = '%s'", 
+				$db->escapeSimple($request['extdisplay'])));  
+		break; 
+		case 'edtIncoming':     // deleting and adding as in core module 
+			$results = sql(sprintf("DELETE FROM cidroute_config WHERE trunk = '%s'", 
+				$db->escapeSimple($request['extdisplay'])));  
+			$results = sql(sprintf('INSERT INTO cidroute_config (trunk, enabled) VALUES ("%s", %d)',  
+				$db->escapeSimple($request['extdisplay']), $request['cidroute'])); 
+		break; 
+	} 
+} 
+
 function cidroute_hookGet_config($engine) {
 	global $ext;  
 	switch($engine) {
@@ -110,7 +132,7 @@ function cidroute_list() {
 	$results = sql("SELECT * FROM cidroute_dests","getAll",DB_FETCHMODE_ASSOC);
 	if(is_array($results)){
 		foreach($results as $result){
-			$dests[] = $result;
+			$dests[$result['destid']] = $result;
 		}
 	}
 	return isset($dests)?$dests:null;

@@ -216,7 +216,7 @@ function showEdit($itemid,$cidmaps)
 	
 <tr><td colspan=2>
 <?php
-	print "<h3 id='title'>"._("Route")." ". $cidmaps[$itemid-1]['name'].":</h2></td>";
+	print "<h3 id='title'>"._("Route")." ". $cidmaps[$itemid]['name'].":</h2></td>";
 
 ?>
 	<tr><td colspan=2><span id="instructions"><?php 
