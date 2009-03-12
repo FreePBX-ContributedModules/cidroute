@@ -4,7 +4,7 @@
 	<version>1.0.0</version>
 	<description>This lets you set the destination of an incoming call based on the CallerID of the incoming call. Presently, this database only has AUSTRALIAN data in it.</description>
 	<type>setup</type>
-	<category>Inbound Call Control</category>
+	<category>Third Party Addon</category>
 	<menuitems>
 		<cidroute>Caller Location Routing</cidroute>
 	</menuitems>
